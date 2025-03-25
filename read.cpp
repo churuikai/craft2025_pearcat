@@ -78,14 +78,14 @@ void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
 std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
 {
     // 如果有上次缓存
-    if (!prev_occupied_obj.empty())
-    {
-        for (int obj_id : prev_occupied_obj)
-        {
-            OBJECTS[obj_id].occupied = false;
-        }
-        prev_occupied_obj.clear();
-    }
+    // if (!prev_occupied_obj.empty())
+    // {
+    //     for (int obj_id : prev_occupied_obj)
+    //     {
+    //         OBJECTS[obj_id].occupied = false;
+    //     }
+    //     prev_occupied_obj.clear();
+    // }
 
     int start = _get_best_start(timestamp);
     if (start == -1)
@@ -213,70 +213,6 @@ void Req::update(int req_id, int obj_id, int timestamp)
     this->timestamp = timestamp;
 }
 
-int Disk::_get_best_start(int timestamp)
-{
-    if (req_pos.empty())
-    {
-        return -1;
-    }
-    if (req_pos.size() == 1)
-    {
-        return req_pos.begin()->second[0];
-    }
-
-    // 找到离point最近的
-    int start = point;
-    int start_start = -1;
-    int count = 0;
-    for (int i = 0; i < 6; ++i)
-    {
-        if (!cells[start].req_ids.empty())
-        {
-            if (start_start == -1)
-            {
-                start_start = start;
-            }
-            count++;
-        }
-        start = start % size + 1;
-    }
-    if (count >= 1)
-    {
-        return start_start;
-    }
-
-    // 附近没有就随机选一个
-    int max_count = 0;
-    auto iters = req_pos.begin();
-    for (auto iter = req_pos.begin(); iter != req_pos.end(); ++iter)
-    {
-        if (cells[iter->second[0]].req_ids.size() >= max_count)
-        {
-            max_count = cells[iter->second[0]].req_ids.size();
-            start = iter->second[0];
-            iters = iter;
-        }
-    }
-
-
-    int start_prev = (start + size - 2) % size + 1;
-    count = 0;
-    while (count < 32)
-    {
-        if (cells[start_prev].req_ids.empty())
-        {
-            count++;
-        }
-        else
-        {
-            start = start_prev;
-        }
-        start_prev = (start_prev + size - 2) % size + 1;
-    }
-    assert(start_prev > 0);
-    return start;
-}
-
 // Cell的read方法实现（依赖其他类）
 std::vector<int> Cell::read()
 {
@@ -326,4 +262,68 @@ void Disk::remove_req(int req_id)
         req_pos.erase(req_id);
     }
     return;
+}
+
+int Disk::_get_best_start(int timestamp)
+{
+    if (req_pos.empty())
+    {
+        return -1;
+    }
+    if (req_pos.size() == 1)
+    {
+        return req_pos.begin()->second[0];
+    }
+
+    // 找到离point最近的
+    int start = point;
+    int start_start = -1;
+    int count = 0;
+    for (int i = 0; i < 6; ++i)
+    {
+        if (!cells[start].req_ids.empty())
+        {
+            if (start_start == -1)
+            {
+                start_start = start;
+            }
+            count++;
+        }
+        start = start % size + 1;
+    }
+    if (count >= 1)
+    {
+        return start_start;
+    }
+
+    // 附近没有就选一个
+    int max_count = 0;
+    auto iters = req_pos.begin();
+    for (auto iter = req_pos.begin(); iter != req_pos.end(); ++iter)
+    {
+        if (cells[iter->second[0]].req_ids.size() >= max_count)
+        {
+            max_count = cells[iter->second[0]].req_ids.size();
+            start = iter->second[0];
+            iters = iter;
+        }
+    }
+
+
+    int start_prev = (start + size - 2) % size + 1;
+    count = 0;
+    while (count < 32)
+    {
+        if (cells[start_prev].req_ids.empty())
+        {
+            count++;
+        }
+        else
+        {
+            start = start_prev;
+        }
+        start_prev = (start_prev + size - 2) % size + 1;
+    }
+    assert(start_prev > 0);
+    return start;
 }
