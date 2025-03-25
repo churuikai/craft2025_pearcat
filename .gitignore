@@ -1,0 +1,23 @@
+# 编译
+/build/
+code_craft.exe
+
+# 日志文件
+*.log
+log.txt
+debug.txt
+result.txt
+/replay/*.txt
+*.zip
+*.in
+*.exe
+
+# IDE
+/.idea/
+/.vscode/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+/test/ 
