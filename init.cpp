@@ -113,6 +113,13 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     // 预分配所有可能的req_pos空间
     // req_pos.reserve(300000); // 估计请求数量
     this->size = size;
+    
+    // 分配cells内存
+    cells = new Cell*[size+1];
+    for (int i = 1; i <= size; i++) {
+        cells[i] = new Cell();
+    }
+    
     // 磁盘分区
     // tag 0 : 备份区，占比 90%*back/3*size
     // tag 1.1 1.2 1.3 1.4 1.5 ~M.1 M.2 M.3 M.4 M.5 : 数据区，占比 size-90%*back/3*size
@@ -126,7 +133,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     // 数据区初始化 {start, end, size, pointer}
     int pointer_temp = 1;
     for (int tag_id : tag_order) {
-        int tag_id_end = pointer_temp + static_cast<int>(0.9*data_size * tag_size_rate[tag_id]) - 1;
+        int tag_id_end = pointer_temp + static_cast<int>(0.88*data_size * tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) {
             for (int i = 5; i > 1; --i) {
@@ -149,7 +156,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     for (size_t i = 0; i < part_tables.size(); ++i) {
         if (part_tables[i][2] == 0) continue;
         for (int cell_id = part_tables[i][0]; cell_id <= part_tables[i][1]; ++cell_id) {
-            cells[cell_id].part_idx = i;
+            cells[cell_id]->part_idx = i;
         }
     }
     // debug格式化输出
@@ -166,4 +173,15 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     //     output += "]";
     //     debug(output);
     // }
+}
+
+// 添加Disk析构函数实现
+Disk::~Disk() {
+    if (cells) {
+        for (int i = 0; i < MAX_DISK_SIZE; i++) {
+            delete cells[i];
+        }
+        delete[] cells;
+        cells = nullptr;
+    }
 }
