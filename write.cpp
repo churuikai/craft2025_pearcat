@@ -160,14 +160,14 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int>& units, int tag,
         int pointer = part[3]; // 从上次写入的位置开始遍历
         std::vector<int> result;
         for (int unit_id : units) {
-            while (cells[pointer].obj_id != 0) {
+            while (cells[pointer]->obj_id != 0) {
                 pointer = pointer == part[1] ? part[0] : pointer % size + 1;
             }
             // assert(pointer <= part[1] && "分区空间不足");
-            Cell& cell = cells[pointer];
-            cell.obj_id = obj_id;
-            cell.unit_id = unit_id;
-            cell.tag = tag;
+            Cell* cell = cells[pointer];
+            cell->obj_id = obj_id;
+            cell->unit_id = unit_id;
+            cell->tag = tag;
             part[2]--;
             result.push_back(pointer);
             pointer = pointer == part[1] ? part[0] : pointer % size + 1;

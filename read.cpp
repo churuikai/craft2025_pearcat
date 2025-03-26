@@ -1,6 +1,7 @@
 #include "disk_obj_req.h"
 #include "constants.h"
 #include <cstring>
+// #include "debug.h"
 
 void process_read(Controller &controller)
 {
@@ -68,7 +69,7 @@ void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
 {
     for (int cell_idx : cells_idx)
     {
-        cells[cell_idx].req_ids.insert(req_id);
+        cells[cell_idx]->req_ids.insert(req_id);
         req_pos[req_id] = cells_idx;
     }
 }
@@ -77,6 +78,7 @@ void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
 
 std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
 {
+
     // 如果有上次缓存
     // if (!prev_occupied_obj.empty())
     // {
@@ -96,10 +98,11 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
     // 如果最佳起点读取代价大于剩余令牌数，则J
     if ((start - point + size) % size > tokens - 16)
     {
+        // if((start < point or (point==1 &&  start > point))&& id==1){
+        //     debug(TIME,point);
+        // }
         point = start;
-        int point_ = point;
         prev_read_token = 80;
-        point = point_;
         return {"j " + std::to_string(start), std::vector<int>()};
     }
     // 如果最佳起点读取代价小于剩余令牌数，则读取
@@ -126,7 +129,7 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     while (true)
     {
         // 如果是读取
-        if (!cells[point].req_ids.empty())
+        if (!cells[point]->req_ids.empty())
         {
             RPRResult result = GET_TOKEN_TABLE(prev_read_token, free_count, read_count + 1);
 
@@ -148,7 +151,7 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
             }
 
             // 读取该cell
-            auto reqs = cells[point].read();
+            auto reqs = cells[point]->read();
             completed_reqs.insert(completed_reqs.end(), reqs.begin(), reqs.end());
 
             // 累积
@@ -198,7 +201,11 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
                 free_count++;
             }
         }
+        // if(point == 1 && id==1){
+        //     debug(TIME, point);
+        // }
         point = point % size + 1;
+
     }
 }
 void Req::update(int req_id, int obj_id, int timestamp)
@@ -244,7 +251,7 @@ std::vector<int> Cell::read()
             {
                 for (int req_id : completed_reqs)
                 {
-                    DISKS[disk_id].cells[cell_idx].req_ids.erase(req_id);
+                    DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
                 }
             }
         }
@@ -279,10 +286,11 @@ int Disk::_get_best_start(int timestamp)
     int start = point;
     int start_start = -1;
     int count = 0;
-    for (int i = 0; i < 6; ++i)
+    for (int i = 0; i < size-part_tables[0][2]; ++i)
     {
-        if (!cells[start].req_ids.empty())
+        if (!cells[start]->req_ids.empty())
         {
+            return start;
             if (start_start == -1)
             {
                 start_start = start;
@@ -290,6 +298,7 @@ int Disk::_get_best_start(int timestamp)
             count++;
         }
         start = start % size + 1;
+        start = start == part_tables[0][0] ? 1: start;
     }
     if (count >= 1)
     {
@@ -301,9 +310,9 @@ int Disk::_get_best_start(int timestamp)
     auto iters = req_pos.begin();
     for (auto iter = req_pos.begin(); iter != req_pos.end(); ++iter)
     {
-        if (cells[iter->second[0]].req_ids.size() >= max_count)
+        if (cells[iter->second[0]]->req_ids.size() >= max_count)
         {
-            max_count = cells[iter->second[0]].req_ids.size();
+            max_count = cells[iter->second[0]]->req_ids.size();
             start = iter->second[0];
             iters = iter;
         }
@@ -314,7 +323,7 @@ int Disk::_get_best_start(int timestamp)
     count = 0;
     while (count < 50)
     {
-        if (cells[start_prev].req_ids.empty())
+        if (cells[start_prev]->req_ids.empty())
         {
             count++;
         }

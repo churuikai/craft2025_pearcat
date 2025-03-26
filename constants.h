@@ -9,7 +9,7 @@
 
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
-inline const int IS_PART_BY_SIZE = 1; // 是否按大小分区 0-1
+inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
 
 // inline int write_count = 1;
 

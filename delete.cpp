@@ -66,11 +66,11 @@ std::vector <int> Controller::delete_obj(int obj_id) {
 
 void Disk::free_cell(int cell_id) {
         // 清除req_pos
-        for (int req_id : cells[cell_id].req_ids) {
+        for (int req_id : cells[cell_id]->req_ids) {
             if (req_pos.find(req_id) != req_pos.end()) {
                 req_pos.erase(req_id);
             }
         }
-        part_tables[cells[cell_id].part_idx][2]++;
-        cells[cell_id].free();
+        part_tables[cells[cell_id]->part_idx][2]++;
+        cells[cell_id]->free();
     }

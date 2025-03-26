@@ -41,7 +41,7 @@ class Disk
 {
 public:
     int id;
-    Cell cells[MAX_DISK_SIZE]; // 改为固定大小数组
+    Cell** cells; // 改为指针数组
     int point;
     int size;
     int tokens;
@@ -51,7 +51,8 @@ public:
     std::vector<int> prev_occupied_obj;
     std::unordered_map<int, std::vector<int>> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
 
-    Disk() : id(0), point(1), size(0), tokens(0), back(0), prev_read_token(80){}
+    Disk() : id(0), point(1), size(0), tokens(0), back(0), prev_read_token(80), cells(nullptr) {}
+    ~Disk(); // 析构函数用于释放内存
     // Disk(int id) : id(id), point(1), size(0), tokens(0), back(0), prev_read_token(80){}
 
     void init(int size, const std::vector<int> &tag_order, const std::vector<double> &tag_size_rate, const std::vector<std::vector<double>> &tag_size_db);
