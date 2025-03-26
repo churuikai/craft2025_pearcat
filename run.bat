@@ -22,4 +22,4 @@ if %ERRORLEVEL% NEQ 0 (
 REM 编译成功
 cd ..
 echo Build successful!
-python run/run.py run/interactor.exe run/sample_practice.in code_craft.exe -r 30000 50000 -d 29000 30001
+python run/run.py run/interactor.exe run/sample_practice.in code_craft.exe
