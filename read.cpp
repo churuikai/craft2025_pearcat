@@ -1,7 +1,7 @@
 #include "disk_obj_req.h"
 #include "constants.h"
 #include <cstring>
-// #include "debug.h"
+#include "debug.h"
 
 void process_read(Controller &controller)
 {
@@ -70,7 +70,7 @@ void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
     for (int cell_idx : cells_idx)
     {
         cells[cell_idx]->req_ids.insert(req_id);
-        req_pos[req_id] = cells_idx;
+        req_pos[req_id].add(cell_idx);
     }
 }
 
@@ -290,12 +290,34 @@ int Disk::_get_best_start(int timestamp)
     {
         if (!cells[start]->req_ids.empty())
         {
+            // // 如果是孤立的，并且请求数量大于250，则不读取
+            // // return start;
+            // if(i>6 and req_pos.size() > 100*cells[start]->req_ids.size()){
+            //     int alone_count = 2;
+            //     int tmp = start % size + 1;
+            //     tmp = tmp == part_tables[0][0] ? 1: tmp;
+            //     while(alone_count--){
+            //         if(!cells[tmp]->req_ids.empty()){
+            //             return start;
+            //         }
+            //         tmp = tmp % size + 1;
+            //         tmp = tmp == part_tables[0][0] ? 1: tmp;
+            //     }
+            //     if(id==1){
+            //         debug(TIME, start);
+            //     }
+
+            // }
+            // else{
+            //     return start;
+            // }
+
             return start;
-            if (start_start == -1)
-            {
-                start_start = start;
-            }
-            count++;
+            // if (start_start == -1)
+            // {
+            //     start_start = start;
+            // }
+            // count++;
         }
         start = start % size + 1;
         start = start == part_tables[0][0] ? 1: start;

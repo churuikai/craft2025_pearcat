@@ -11,6 +11,12 @@
 inline const int BACK_NUM = 2; // 备份区数量 0-2
 inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
 
+//是否间隔反向
+inline const int IS_INTERVAL_REVERSE = 1; // 0-1
+
+// 动态分区策略
+inline const int BLOCK_SIZE = 0;  // 0 表示关闭
+
 // inline int write_count = 1;
 
 // 使用inline关键字允许在头文件中定义常量
