@@ -17,6 +17,7 @@ struct Cell;
 
 extern std::vector<std::vector<std::vector<int>>> FRE;
 extern int T, M, N, V, G, TIME;
+inline float G_float;
 extern Disk DISKS[MAX_DISK_NUM];
 extern Object OBJECTS[MAX_OBJECT_NUM];
 extern Req REQS[LEN_REQ];
@@ -50,7 +51,9 @@ public:
     int prev_read_token;
     std::vector<int> prev_occupied_obj;
     std::unordered_map<int, std::vector<int>> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
-
+    int req_cells_num = 0;
+    int consume_token_tmp[MAX_DISK_SIZE];
+ 
     Disk() : id(0), point(1), size(0), tokens(0), back(0), prev_read_token(80), cells(nullptr) {}
     ~Disk(); // 析构函数用于释放内存
     // Disk(int id) : id(id), point(1), size(0), tokens(0), back(0), prev_read_token(80){}
@@ -67,9 +70,11 @@ public:
 
     std::pair<std::string, std::vector<int>> read(int timestamp);
 
-    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path();
+    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start);
 
     int _get_best_start(int timestamp);
+
+    void _get_consume_token(int start_point, int last_token, int target_point);
 };
 
 // 对象

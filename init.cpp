@@ -6,6 +6,8 @@ void init_input() {
     // 读取基本参数
     scanf("%d%d%d%d%d", &T, &M, &N, &V, &G);
 
+    G_float = G;
+
     // 初始化频率数据
     FRE.resize(MAX_TAG_NUM + 1, std::vector<std::vector<int>>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, std::vector<int>(3, 0)));
     
