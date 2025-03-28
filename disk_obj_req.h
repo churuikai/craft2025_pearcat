@@ -46,17 +46,25 @@ public:
     int point;
     int size;
     int tokens;
-    std::vector<std::vector<int>> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
+    // std::vector<std::vector<int>> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
+    std::vector<Int16Array> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
     int back; // 备份区数量 0-2
     int prev_read_token;
-    std::vector<int> prev_occupied_obj;
-    std::unordered_map<int, std::vector<int>> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
     int req_cells_num = 0;
     int consume_token_tmp[MAX_DISK_SIZE];
  
+    // std::vector<int> prev_occupied_obj;
+    // std::unordered_map<int, std::vector<int>> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
+    IncIDMap<Int16Array> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
+
+    //标签间接反向, 该标签对应的标签
+    int tag_reverse[MAX_TAG_NUM+1] = {0};
+
+    // 分片存储策略
+    // int tag_free_count[MAX_TAG_NUM+1] = {0};
+
     Disk() : id(0), point(1), size(0), tokens(0), back(0), prev_read_token(80), cells(nullptr) {}
-    ~Disk(); // 析构函数用于释放内存
-    // Disk(int id) : id(id), point(1), size(0), tokens(0), back(0), prev_read_token(80){}
+    ~Disk();
 
     void init(int size, const std::vector<int> &tag_order, const std::vector<double> &tag_size_rate, const std::vector<std::vector<double>> &tag_size_db);
 

@@ -1,7 +1,7 @@
 #include "constants.h"
 #include "disk_obj_req.h"
 #include <limits>
-// #include "debug.h"
+#include "debug.h"
 void init_input() {
     // 读取基本参数
     scanf("%d%d%d%d%d", &T, &M, &N, &V, &G);
@@ -98,10 +98,13 @@ void init_input() {
         fre_tmp_old = fre_tmp_new;
         tag_order.push_back(min_diff_tag);
     }
-    // if (DEBUG) {
-    //     debug(tag_order);
-    // }
+ 
+    debug(tag_order);
 
+    // tag_order = {14, 13, 15, 9, 11, 2, 5, 6, 7, 10, 4, 8, 1, 12, 16, 3};
+    tag_order = {14, 3, 13, 16, 15, 12, 9, 1, 11, 8, 2, 4, 5,10, 6, 7};
+    // tag_order = {9, 1, 13, 16, 15, 12,  11, 8, 5,10, 6, 7,  2, 4,3,14};
+    // tag_order = {14, 7, 13, 10, 15, 4, 9, 8, 11, 1, 2, 12, 5,16, 6, 3};
     // 初始化各个磁盘
     for (int i = 1; i <= N; ++i) {
         DISKS[i].id = i;
@@ -135,7 +138,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     // 数据区初始化 {start, end, size, pointer}
     int pointer_temp = 1;
     for (int tag_id : tag_order) {
-        int tag_id_end = pointer_temp + static_cast<int>(0.88*data_size * tag_size_rate[tag_id]) - 1;
+        int tag_id_end = pointer_temp + static_cast<int>(0.85*data_size * tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) {
             for (int i = 5; i > 1; --i) {
@@ -161,6 +164,22 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             cells[cell_id]->part_idx = i;
         }
     }
+
+    // 标签间接反向
+    if(IS_INTERVAL_REVERSE) {
+        part_tables[0][0], part_tables[0][1] = part_tables[0][1], part_tables[0][0];
+        for(int i = 1; i<=tag_order.size(); i+=2) {
+            for(int j=1; j<=5; ++j) {
+                part_tables[tag_order[i]*5+j][0], part_tables[tag_order[i]*5+j][1] = part_tables[tag_order[i]*5+j][1], part_tables[tag_order[i]*5+j][0];
+            }
+        }
+        for(int i = 1; i <= tag_order.size(); i+=2) {
+            assert(tag_order[i-1] != 0);
+            tag_reverse[tag_order[i-1]] = tag_order[i];
+            tag_reverse[tag_order[i]] = tag_order[i-1];
+        }
+    }
+    
     // debug格式化输出
     // if (DEBUG) {
     //     std::string output = "disk: " + std::to_string(id) + " part_tables: [";
