@@ -12,14 +12,27 @@
 
 //  调试开关和文件设置
 #ifndef DEBUG
-#define DEBUG 1
+// #define DEBUG 0
+#endif
+
+#ifndef DEBUG_FILE
 #define DEBUG_FILE "log.txt"
 #endif
 
+// 定义debug宏，当DEBUG为0时，debug函数调用会被完全移除
+#ifdef DEBUG
+#define debug(...) debug(__VA_ARGS__)
+#else
+#define debug(...) ((void)0)
+#endif
+
 // 全局调试计数
+#ifdef DEBUG
 extern int DEBUG_COUNT;
+#endif
 
 // 基础类型输出函数声明
+#ifdef DEBUG
 void debug_print(int value, std::ofstream& out);
 void debug_print(long value, std::ofstream& out);
 void debug_print(long long value, std::ofstream& out);
@@ -110,6 +123,7 @@ void debug(const std::string& v1, int v2, int v3, int v4);
 
 // 清空调试文件
 void clear_debug();
+#endif // DEBUG
 
 
 

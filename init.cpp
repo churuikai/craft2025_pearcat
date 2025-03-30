@@ -100,9 +100,13 @@ void init_input() {
     debug(tag_order);
 
     // tag_order = {14, 13, 15, 9, 11, 2, 5, 6, 7, 10, 4, 8, 1, 12, 16, 3};
-    tag_order = {14, 3, 13, 16, 15, 12, 9, 1, 11, 8, 2, 4, 5,10, 6, 7};
+    // tag_order = {14, 3, 13, 16, 15, 12, 9, 1, 11, 8, 2, 4, 5,10, 6, 7};
     // tag_order = {9, 1, 13, 16, 15, 12,  11, 8, 5,10, 6, 7,  2, 4,3,14};
     // tag_order = {14, 7, 13, 10, 15, 4, 9, 8, 11, 1, 2, 12, 5,16, 6, 3};
+    // tag_order = {13, 14, 1, 5, 9, 10, 4, 3, 6, 15, 7, 8, 2, 12, 16, 11}; // official
+    tag_order = {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11}; // official
+    // tag_order = {13, 6, 14, 15, 1,7, 5,8, 9,2, 10,12, 4,16, 3,11}; // official
+    // tag_order = {13, 11, 14, 16, 1, 12, 5, 2, 9, 8, 10, 7, 4, 15, 3, 6};
     // 初始化各个磁盘
     for (int i = 1; i <= N; ++i) {
         DISKS[i].id = i;
@@ -129,14 +133,14 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     int back_size = this->back == 0 ? 0 : static_cast<int>(0.305 * this->back * size) + 1;
     int data_size = size - back_size;
     
-    part_tables.resize((tag_order.size() + 1) * 5 + 1, {0, 0, 0, 0});
+    part_tables.resize((tag_order.size() + 1) * 5 + 1);
 
     // 备份区初始化 {start, end, size, pointer}
     part_tables[0] = {data_size + 1, size, back_size, data_size+1};
     // 数据区初始化 {start, end, size, pointer}
     int pointer_temp = 1;
     for (int tag_id : tag_order) {
-        int tag_id_end = pointer_temp + static_cast<int>(0.85*data_size * tag_size_rate[tag_id]) - 1;
+        int tag_id_end = pointer_temp + static_cast<int>(0.84*data_size * tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) {
             for (int i = 5; i > 1; --i) {

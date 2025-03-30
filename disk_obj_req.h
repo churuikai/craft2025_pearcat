@@ -36,6 +36,45 @@ struct Cell
     std::vector<int> read();
 };
 
+struct Part
+{
+    int start;
+    int end;
+    int free_cells;
+    int last_write_pos;
+    int tag;
+    int size;
+    Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0) {}
+
+    [[deprecated("Dont use operator[], Please use member variables directly: start, end, free_cells, last_write_pos!")]]
+    Part(std::initializer_list<int> init) : start(0), end(0), free_cells(0), last_write_pos(0) {
+        int i = 0;
+        for (int val : init) {
+            if (i == 0) start = val;
+            else if (i == 1) end = val;
+            else if (i == 2) free_cells = val;
+            else if (i == 3) last_write_pos = val;
+            else if (i == 4) tag = val;
+            else if (i == 5) size = val;
+            i++;
+            if (i > 5) break;
+        }
+    }
+    // 标记为废弃，建议直接使用成员变量
+    [[deprecated("Dont use operator[], Please use member variables directly: start, end, free_cells, last_write_pos!")]]
+    int& operator[](int idx) {
+        switch(idx) {
+            case 0: return start;
+            case 1: return end;
+            case 2: return free_cells;
+            case 3: return last_write_pos;
+            case 4: return tag;
+            case 5: return size;
+            default: return start;
+        }
+    }
+};
+
 // 磁盘
 class Disk
 {
@@ -45,12 +84,9 @@ public:
     int point;
     int size;
     int tokens;
-    // std::vector<std::vector<int>> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
-    std::vector<Int16Array> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
+    std::vector<Part> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
     int back; // 备份区数量 0-2
     int prev_read_token;
-    // std::vector<int> prev_occupied_obj;
-    // std::unordered_map<int, std::vector<int>> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
     IncIDMap<Int16Array> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
 
     //标签间接反向, 该标签对应的标签
@@ -63,6 +99,8 @@ public:
     ~Disk();
 
     void init(int size, const std::vector<int> &tag_order, const std::vector<double> &tag_size_rate, const std::vector<std::vector<double>> &tag_size_db);
+
+    std::vector<Part>& get_parts(int tag, int size){}
 
     void free_cell(int cell_id);
 
@@ -95,10 +133,6 @@ public:
         replicas.resize(REP_NUM, {0, std::vector<int>()});
     }
 
-    // Object(int id) : id(id), size(0), tag(0), occupied(false)
-    // {
-    //     replicas.resize(REP_NUM, {0, std::vector<int>()});
-    // }
 };
 
 
@@ -108,17 +142,9 @@ class Req
 public:
     // int id;
     int obj_id;
-    // std::unordered_set<int> remain_units;
     Int3Set remain_units;
     int timestamp;
-
-    // 添加默认构造函数
-    // Req() : id(0), obj_id(0), timestamp(0) {}
-
-    // Req(int id) : id(id), obj_id(0), timestamp(0) {}
-
     void update(int req_id, int obj_id, int timestamp);
-    // void completed();
 };
 
 
@@ -152,8 +178,6 @@ private:
 };
 
 // 读写删频率
-
-
 
 
 // 函数声明

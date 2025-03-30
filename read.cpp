@@ -1,8 +1,7 @@
 #include "disk_obj_req.h"
 #include "constants.h"
-#include <cstring>
 #include "debug.h"
-
+#include "token_table.h"
 void process_read(Controller &controller)
 {
     int n_read;
@@ -74,36 +73,25 @@ void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
     }
 }
 
-
-
 std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
 {
-
-    // 如果有上次缓存
-    // if (!prev_occupied_obj.empty())
-    // {
-    //     for (int obj_id : prev_occupied_obj)
-    //     {
-    //         OBJECTS[obj_id].occupied = false;
-    //     }
-    //     prev_occupied_obj.clear();
-    // }
 
     int start = _get_best_start(timestamp);
     if (start == -1)
     {
         return {"#", std::vector<int>()};
     }
-
     // 如果最佳起点读取代价大于剩余令牌数，则J
-    if ((start - point + size) % size > tokens - 16)
+    if ((start - point + size) % size > tokens)
     {
-        // if((start < point or (point==1 &&  start > point))&& id==1){
-        //     debug(TIME,point);
-        // }
+        if((start < point or (point==1 &&  start > point))&& id==1){
+            debug(TIME,point);
+        }
+
         point = start;
         prev_read_token = 80;
         return {"j " + std::to_string(start), std::vector<int>()};
+
     }
     // 如果最佳起点读取代价小于剩余令牌数，则读取
     else
@@ -120,93 +108,38 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     std::vector<int> completed_reqs;
     std::vector<int> occupied_obj;
 
-    int free_count = 0;
-    int read_count = 0;
-    int end_token = prev_read_token;
-    bool r_or_pr = false;
-    int token = 0;
-
-    while (true)
-    {
-        // 如果是读取
-        if (!cells[point]->req_ids.empty())
-        {
-            RPRResult result = GET_TOKEN_TABLE(prev_read_token, free_count, read_count + 1);
-
-            if (tokens - result.cost < 0)
-            {
-                // 结算
-                prev_read_token = end_token;
-                if (r_or_pr)
-                {
-                    path.append(free_count + read_count, 'r');
-                }
-                else
-                {
-                    path.append(free_count, 'p');
-                    path.append(read_count, 'r');
-                }
-                tokens -= token;
-                return {path, completed_reqs, occupied_obj};
-            }
-
-            // 读取该cell
-            auto reqs = cells[point]->read();
-            completed_reqs.insert(completed_reqs.end(), reqs.begin(), reqs.end());
-
-            // 累积
-            end_token = result.prev_token;
-            r_or_pr = result.r_or_p;
-            token = result.cost;
-            read_count++;
-        }
-        // 如果是跳过
-        else
-        {
-            if (read_count > 0)
-            {
-                // 结算
-                prev_read_token = end_token;
-                end_token = 80;
-                if (r_or_pr)
-                {
-                    path.append(free_count + read_count, 'r');
-                }
-                else
-                {
-                    path.append(free_count, 'p');
-                    path.append(read_count, 'r');
-                }
-                tokens -= token;
-                read_count = 0;
-                free_count = 0;
-                r_or_pr = false;
-                token = 0;
-            }
-
-            if (tokens - free_count - 1 < 0)
-            {
-                // 结算
-                if (free_count > 0)
-                {
-                    prev_read_token = 80;
-                }
-                path.append(free_count, 'p');
-                tokens -= free_count;
-                return {path, completed_reqs, occupied_obj};
-            }
-            else
-            {
-                end_token = 80;
-                free_count++;
-            }
-        }
-        // if(point == 1 && id==1){
-        //     debug(TIME, point);
-        // }
-        point = point % size + 1;
-
+    int win_end = point;
+    auto fo_seq = EMPTY_SEQUENCE;
+    for(int i = 0; i < 13; ++i){
+        // 更新滑动窗口序列
+        update_sequence(fo_seq, !cells[win_end]->req_ids.empty());
+        win_end = win_end % size + 1;
     }
+
+    while(true){
+        auto decision = get_decision(prev_read_token, fo_seq);
+        if(tokens - decision.cost < 0){
+            break;
+        }
+        if(decision.is_r) 
+        {
+            path.append(1, 'r'); 
+            auto completed_reqs_cell = cells[point]->read();
+            completed_reqs.insert(completed_reqs.end(), completed_reqs_cell.begin(), completed_reqs_cell.end());
+        }
+        else{
+            path.append(1, 'p');
+        }
+        tokens -= decision.cost;
+        prev_read_token = decision.next_token;
+        if(point == 1 && id==1){
+            debug(TIME, point);
+        }
+        point = point % size + 1;
+        update_sequence(fo_seq, !cells[win_end]->req_ids.empty());
+        win_end = win_end % size + 1;
+    }
+    return {path, completed_reqs, occupied_obj};
 }
 void Req::update(int req_id, int obj_id, int timestamp)
 {
@@ -281,80 +214,17 @@ int Disk::_get_best_start(int timestamp)
     {
         return req_pos.begin()->second[0];
     }
-
     // 找到离point最近的
     int start = point;
     int start_start = -1;
-    int count = 0;
     for (int i = 0; i < size-part_tables[0][2]; ++i)
     {
         if (!cells[start]->req_ids.empty())
         {
-            // // 如果是孤立的，并且请求数量大于250，则不读取
-            // // return start;
-            // if(i>6 and req_pos.size() > 100*cells[start]->req_ids.size()){
-            //     int alone_count = 2;
-            //     int tmp = start % size + 1;
-            //     tmp = tmp == part_tables[0][0] ? 1: tmp;
-            //     while(alone_count--){
-            //         if(!cells[tmp]->req_ids.empty()){
-            //             return start;
-            //         }
-            //         tmp = tmp % size + 1;
-            //         tmp = tmp == part_tables[0][0] ? 1: tmp;
-            //     }
-            //     if(id==1){
-            //         debug(TIME, start);
-            //     }
-
-            // }
-            // else{
-            //     return start;
-            // }
-
             return start;
-            // if (start_start == -1)
-            // {
-            //     start_start = start;
-            // }
-            // count++;
         }
         start = start % size + 1;
         start = start == part_tables[0][0] ? 1: start;
     }
-    if (count >= 1)
-    {
-        return start_start;
-    }
 
-    // 附近没有就选一个
-    int max_count = 0;
-    auto iters = req_pos.begin();
-    for (auto iter = req_pos.begin(); iter != req_pos.end(); ++iter)
-    {
-        if (cells[iter->second[0]]->req_ids.size() >= max_count)
-        {
-            max_count = cells[iter->second[0]]->req_ids.size();
-            start = iter->second[0];
-            iters = iter;
-        }
-    }
-
-
-    int start_prev = (start + size - 2) % size + 1;
-    count = 0;
-    while (count < 50)
-    {
-        if (cells[start_prev]->req_ids.empty())
-        {
-            count++;
-        }
-        else
-        {
-            start = start_prev;
-        }
-        start_prev = (start_prev + size - 2) % size + 1;
-    }
-    assert(start_prev > 0);
-    return start;
 }

@@ -1,5 +1,7 @@
 #include "debug.h"
 
+#ifdef DEBUG
+
 // 全局调试计数初始化
 int DEBUG_COUNT = 0;
 
@@ -231,7 +233,6 @@ void debug_print_unknown(const void*, std::ofstream& out) {
 
 // 单参数调试函数实现
 void debug(int value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -240,7 +241,6 @@ void debug(int value) {
 }
 
 void debug(long value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -249,7 +249,6 @@ void debug(long value) {
 }
 
 void debug(long long value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -258,7 +257,6 @@ void debug(long long value) {
 }
 
 void debug(unsigned int value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -267,7 +265,6 @@ void debug(unsigned int value) {
 }
 
 void debug(unsigned long value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -276,7 +273,6 @@ void debug(unsigned long value) {
 }
 
 void debug(unsigned long long value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -285,7 +281,6 @@ void debug(unsigned long long value) {
 }
 
 void debug(float value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -294,7 +289,6 @@ void debug(float value) {
 }
 
 void debug(double value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -303,7 +297,6 @@ void debug(double value) {
 }
 
 void debug(bool value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -312,7 +305,6 @@ void debug(bool value) {
 }
 
 void debug(char value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -321,7 +313,6 @@ void debug(char value) {
 }
 
 void debug(const char* value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -330,7 +321,6 @@ void debug(const char* value) {
 }
 
 void debug(const std::string& value) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(value, out);
@@ -339,7 +329,6 @@ void debug(const std::string& value) {
 }
 
 void debug(const std::vector<int>& vec) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(vec, out);
@@ -348,7 +337,6 @@ void debug(const std::vector<int>& vec) {
 }
 
 void debug(const std::vector<std::string>& vec) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(vec, out);
@@ -357,7 +345,6 @@ void debug(const std::vector<std::string>& vec) {
 }
 
 void debug(const std::vector<double>& vec) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(vec, out);
@@ -366,7 +353,6 @@ void debug(const std::vector<double>& vec) {
 }
 
 void debug(const std::vector<bool>& vec) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(vec, out);
@@ -375,7 +361,6 @@ void debug(const std::vector<bool>& vec) {
 }
 
 void debug(const std::vector<char>& vec) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(vec, out);
@@ -384,7 +369,6 @@ void debug(const std::vector<char>& vec) {
 }
 
 void debug(const std::map<int, int>& m) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(m, out);
@@ -393,7 +377,6 @@ void debug(const std::map<int, int>& m) {
 }
 
 void debug(const std::map<std::string, int>& m) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(m, out);
@@ -402,7 +385,6 @@ void debug(const std::map<std::string, int>& m) {
 }
 
 void debug(const std::map<int, std::string>& m) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(m, out);
@@ -411,7 +393,6 @@ void debug(const std::map<int, std::string>& m) {
 }
 
 void debug(const std::map<std::string, std::string>& m) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(m, out);
@@ -420,7 +401,6 @@ void debug(const std::map<std::string, std::string>& m) {
 }
 
 void debug(const std::set<int>& s) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(s, out);
@@ -429,7 +409,6 @@ void debug(const std::set<int>& s) {
 }
 
 void debug(const std::set<std::string>& s) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(s, out);
@@ -439,7 +418,6 @@ void debug(const std::set<std::string>& s) {
 
 // 多参数调试函数实现
 void debug(int v1, int v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -450,7 +428,6 @@ void debug(int v1, int v2) {
 }
 
 void debug(const std::string& v1, int v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -461,7 +438,6 @@ void debug(const std::string& v1, int v2) {
 }
 
 void debug(int v1, const std::string& v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -472,7 +448,6 @@ void debug(int v1, const std::string& v2) {
 }
 
 void debug(const std::string& v1, const std::string& v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -483,7 +458,6 @@ void debug(const std::string& v1, const std::string& v2) {
 }
 
 void debug(const char* v1, int v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -494,7 +468,6 @@ void debug(const char* v1, int v2) {
 }
 
 void debug(int v1, const char* v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -505,7 +478,6 @@ void debug(int v1, const char* v2) {
 }
 
 void debug(const char* v1, const char* v2) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -516,7 +488,6 @@ void debug(const char* v1, const char* v2) {
 }
 
 void debug(int v1, int v2, int v3) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -529,7 +500,6 @@ void debug(int v1, int v2, int v3) {
 }
 
 void debug(const std::string& v1, int v2, int v3) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -542,7 +512,6 @@ void debug(const std::string& v1, int v2, int v3) {
 }
 
 void debug(int v1, const std::string& v2, int v3) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -555,7 +524,6 @@ void debug(int v1, const std::string& v2, int v3) {
 }
 
 void debug(int v1, int v2, const std::string& v3) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -568,7 +536,6 @@ void debug(int v1, int v2, const std::string& v3) {
 }
 
 void debug(int v1, int v2, int v3, int v4) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -583,7 +550,6 @@ void debug(int v1, int v2, int v3, int v4) {
 }
 
 void debug(const std::string& v1, int v2, int v3, int v4) {
-    if (!DEBUG) return;
     std::ofstream out(DEBUG_FILE, std::ios::app);
     out << "DEBUG " << DEBUG_COUNT++ << ": ";
     debug_print(v1, out);
@@ -603,3 +569,5 @@ void clear_debug() {
     out.close();
     DEBUG_COUNT = 0;
 }
+
+#endif // DEBUG
