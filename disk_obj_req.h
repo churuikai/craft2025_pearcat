@@ -17,6 +17,7 @@ struct Cell;
 
 extern std::vector<std::vector<std::vector<int>>> FRE;
 extern int T, M, N, V, G, TIME;
+inline float G_float;
 extern Disk DISKS[MAX_DISK_NUM];
 extern Object OBJECTS[MAX_OBJECT_NUM];
 extern Req REQS[LEN_REQ];
@@ -87,6 +88,8 @@ public:
     std::vector<Part> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
     int back; // 备份区数量 0-2
     int prev_read_token;
+    int req_cells_num = 0;
+    int consume_token_tmp[MAX_DISK_SIZE];
     IncIDMap<Int16Array> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
 
     //标签间接反向, 该标签对应的标签
@@ -112,9 +115,11 @@ public:
 
     std::pair<std::string, std::vector<int>> read(int timestamp);
 
-    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path();
+    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start);
 
     int _get_best_start(int timestamp);
+
+    void _get_consume_token(int start_point, int last_token, int target_point);
 };
 
 // 对象

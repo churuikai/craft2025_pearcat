@@ -69,6 +69,7 @@ void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
     for (int cell_idx : cells_idx)
     {
         cells[cell_idx]->req_ids.insert(req_id);
+        req_cells_num++;
         req_pos[req_id].add(cell_idx);
     }
 }
@@ -77,12 +78,14 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
 {
 
     int start = _get_best_start(timestamp);
+    //if(TIME==2)
+    //debug(start);
     if (start == -1)
     {
         return {"#", std::vector<int>()};
     }
     // 如果最佳起点读取代价大于剩余令牌数，则J
-    if ((start - point + size) % size > tokens)
+    if ((start - point + size) % size > tokens-16)
     {
         if((start < point or (point==1 &&  start > point))&& id==1){
             debug(TIME,point);
@@ -96,12 +99,12 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
     // 如果最佳起点读取代价小于剩余令牌数，则读取
     else
     {
-        auto [path, completed_reqs, _] = _read_by_best_path();
+        auto [path, completed_reqs, _] = _read_by_best_path(start);
         return {path + "#", completed_reqs};
     }
 }
 
-std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_path()
+std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_path(int start)
 {
     // 通过free-read状态获取读取路径, 维护point、prev_read_token、tokens
     std::string path = "";
@@ -141,6 +144,7 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     }
     return {path, completed_reqs, occupied_obj};
 }
+
 void Req::update(int req_id, int obj_id, int timestamp)
 {
     // this->id = req_id;
@@ -156,6 +160,7 @@ void Req::update(int req_id, int obj_id, int timestamp)
 // Cell的read方法实现（依赖其他类）
 std::vector<int> Cell::read()
 {
+
     std::vector<int> completed_reqs;
     // 检查req是否完成 更新完成的 req
     for (int req_id : req_ids)
@@ -193,7 +198,6 @@ std::vector<int> Cell::read()
     return completed_reqs;
 }
 
-
 void Disk::remove_req(int req_id)
 {
     // cell在读取中已经被清除req_ids，所以不需要再清除
@@ -224,7 +228,6 @@ int Disk::_get_best_start(int timestamp)
             return start;
         }
         start = start % size + 1;
-        start = start == part_tables[0][0] ? 1: start;
     }
 
 }

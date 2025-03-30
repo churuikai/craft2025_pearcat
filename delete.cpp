@@ -66,6 +66,7 @@ std::vector <int> Controller::delete_obj(int obj_id) {
 
 void Disk::free_cell(int cell_id) {
         // 清除req_pos
+        req_cells_num -= cells[cell_id]->req_ids.size();
         for (int req_id : cells[cell_id]->req_ids) {
             if (req_pos.find(req_id) != req_pos.end()) {
                 req_pos.erase(req_id);
