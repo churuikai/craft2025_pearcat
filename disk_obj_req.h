@@ -47,7 +47,6 @@ struct Part
     int size;
     Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0) {}
 
-    [[deprecated("Dont use operator[], Please use member variables directly: start, end, free_cells, last_write_pos!")]]
     Part(std::initializer_list<int> init) : start(0), end(0), free_cells(0), last_write_pos(0) {
         int i = 0;
         for (int val : init) {

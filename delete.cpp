@@ -72,6 +72,6 @@ void Disk::free_cell(int cell_id) {
                 req_pos.erase(req_id);
             }
         }
-        part_tables[cells[cell_id]->part_idx][2]++;
+        part_tables[cells[cell_id]->part_idx].free_cells++;
         cells[cell_id]->free();
     }

@@ -85,7 +85,7 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
         return {"#", std::vector<int>()};
     }
     // 如果最佳起点读取代价大于剩余令牌数，则J
-    if ((start - point + size) % size > tokens-16)
+    if ((start - point + size) % size > tokens)
     {
         if((start < point or (point==1 &&  start > point))&& id==1){
             debug(TIME,point);
@@ -220,14 +220,15 @@ int Disk::_get_best_start(int timestamp)
     }
     // 找到离point最近的
     int start = point;
-    int start_start = -1;
-    for (int i = 0; i < size-part_tables[0][2]; ++i)
+    for (int i = 0; i < size-part_tables[0].free_cells; ++i)
     {
+        start = start < part_tables[0].start ? start : 1;
         if (!cells[start]->req_ids.empty())
         {
             return start;
         }
-        start = start % size + 1;
+        start = start % size + 1;        
     }
+    assert(false);
 
 }

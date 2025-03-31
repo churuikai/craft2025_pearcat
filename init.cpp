@@ -150,7 +150,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
                 int size_temp = static_cast<int>(data_size * tag_size_rate[tag_id] * tag_size_db[tag_id][i - 1]);
                 size_temp = size_temp - size_temp % i; // 取整对齐粒度
                 part_tables[tag_id * 5 + i] = {pointer_temp, pointer_temp + size_temp - 1, size_temp, pointer_temp};
-                pointer_temp = part_tables[tag_id * 5 + i][1] + 1;
+                pointer_temp = part_tables[tag_id * 5 + i].end + 1;
             }
         }
         part_tables[tag_id * 5 + 1] = {pointer_temp, tag_id_end, tag_id_end - pointer_temp + 1, pointer_temp};
@@ -158,23 +158,23 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     }
   
     // 调整边界
-    part_tables[tag_order.back() * 5 + 1][1] = data_size;
-    part_tables[tag_order.back() * 5 + 1][2] = data_size - part_tables[tag_order.back() * 5 + 1][0] + 1;
+    part_tables[tag_order.back() * 5 + 1].end = data_size;
+    part_tables[tag_order.back() * 5 + 1].free_cells = data_size - part_tables[tag_order.back() * 5 + 1].start + 1;
     
     // 初始化单元
     for (size_t i = 0; i < part_tables.size(); ++i) {
-        if (part_tables[i][2] == 0) continue;
-        for (int cell_id = part_tables[i][0]; cell_id <= part_tables[i][1]; ++cell_id) {
+        if (part_tables[i].free_cells == 0) continue;
+        for (int cell_id = part_tables[i].start; cell_id <= part_tables[i].end; ++cell_id) {
             cells[cell_id]->part_idx = i;
         }
     }
 
     // 标签间接反向
     if(IS_INTERVAL_REVERSE) {
-        part_tables[0][0], part_tables[0][1] = part_tables[0][1], part_tables[0][0];
+        part_tables[0].start, part_tables[0].end = part_tables[0].end, part_tables[0].start;
         for(int i = 1; i<=tag_order.size(); i+=2) {
             for(int j=1; j<=5; ++j) {
-                part_tables[tag_order[i]*5+j][0], part_tables[tag_order[i]*5+j][1] = part_tables[tag_order[i]*5+j][1], part_tables[tag_order[i]*5+j][0];
+                part_tables[tag_order[i]*5+j].start, part_tables[tag_order[i]*5+j].end = part_tables[tag_order[i]*5+j].end, part_tables[tag_order[i]*5+j].start;
             }
         }
         for(int i = 1; i <= tag_order.size(); i+=2) {
