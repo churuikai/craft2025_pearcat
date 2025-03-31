@@ -27,18 +27,13 @@ void process_write(Controller &controller)
 }
 
 // 获取磁盘和对应分区
-std::vector<std::pair<int, int>> Controller::_get_disk(int obj_size, int tag)
+std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
 {
 
-    std::vector<std::pair<int, int>> space; // <disk_id, part_idx>
+    std::vector<std::pair<int, Part*>> space; // <disk_id, part_idx>
     // 每过cycle个周期换一次磁盘
     int cycle = 1;
     int tmp_time = TIME / cycle + cycle;
-    // int tmp_time = write_count;
-    // write_count++;
-    // if(TIME>1000){
-    //     tmp_time = TIME/100;
-    // }
 
     // 优先选择对应tag对应size分区有空闲空间的磁盘
     std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; tag_list[tag + 1] = 0;
@@ -54,15 +49,17 @@ std::vector<std::pair<int, int>> Controller::_get_disk(int obj_size, int tag)
             for (int i = 1 + tmp_time; i <= N + tmp_time; ++i)
             {
                 int disk_id = (i - 1) % N + 1;
-
                 // 检查磁盘是否已经在space中
+                if (space.size() == 3 - BACK_NUM) break;
                 if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p){ return p.first == disk_id; }))continue;
                 tag_ = tag_ == -1 ? DISKS[disk_id].tag_reverse[tag] : tag_;
-                if (DISKS[disk_id].part_tables[tag_ * 5 + size_].free_cells >= obj_size)
+                for(auto& part : DISKS[disk_id].get_parts(tag_, size_)) 
                 {
-                    space.push_back({disk_id, tag_ * 5 + size_});
-                    if (space.size() == 3 - BACK_NUM)
-                        break; // 跳出循环
+                    if (part.free_cells >= obj_size)
+                    {
+                        space.push_back({disk_id, &part});
+                        if (space.size() == 3 - BACK_NUM) break;
+                    }
                 }
             }
         }
@@ -76,9 +73,9 @@ std::vector<std::pair<int, int>> Controller::_get_disk(int obj_size, int tag)
         if (space.size() == 3) break;
         int disk_id = (i - 1) % N + 1;
         if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p) { return p.first == disk_id; })) continue;
-        if (DISKS[disk_id].part_tables[0].free_cells >= obj_size)
+        if (DISKS[disk_id].get_parts(0, 0)[0].free_cells >= obj_size)
         {
-            space.push_back({disk_id, 0});
+            space.push_back({disk_id, &DISKS[disk_id].get_parts(0, 0)[0]});
         }
     }
 
@@ -112,8 +109,8 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
 
     for (size_t i = 0; i < space.size(); ++i)
     {
-        auto [disk_id, part_idx] = space[i];
-        auto pos = DISKS[disk_id].write(obj_id, units, tag, part_idx);
+        auto& [disk_id, part] = space[i];
+        auto pos = DISKS[disk_id].write(obj_id, units, tag, part);
         obj.replicas[i].first = disk_id;
         obj.replicas[i].second.insert(obj.replicas[i].second.end(), pos.begin(), pos.end());
     }
@@ -121,55 +118,54 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
     return &obj;
 }
 
-std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag, int part_idx)
+std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag, Part* part)
 {
     if (IS_INTERVAL_REVERSE)
     {
-        auto &part = part_tables[part_idx];
-        int pointer = (tag * 5 + 1 <= part_idx and part_idx <= tag * 5 + 5 and part_idx != 0) ? part.start : part.end;
+        // 同tag同向，不同tag反向
+        int pointer = (tag == part->tag) ? part->start : part->end;
         std::vector<int> result;
         for (int unit_id : units)
         {
             while (cells[pointer]->obj_id != 0)
             {
-                if (tag * 5 + 1 <= part_idx and part_idx <= tag * 5 + 5 and part_idx != 0)
+                if (tag == part->tag)
                 {
-                    pointer = part.start < part.end ? pointer + 1 : pointer - 1;
+                    pointer = part->start < part->end ? pointer + 1 : pointer - 1;
                 }
                 else
                 {
-                    pointer = part.start > part.end ? pointer + 1 : pointer - 1;
+                    pointer = part->start > part->end ? pointer + 1 : pointer - 1;
                 }
             }
             cells[pointer]->obj_id = obj_id;
             cells[pointer]->unit_id = unit_id;
             cells[pointer]->tag = tag;
-            part.free_cells--;
+            part->free_cells--;
             result.push_back(pointer);
             // pointer = pointer == part[1] ? part[0] : pointer % size + 1;
         }
         return result;
     }
 
-    auto &part = part_tables[part_idx];
     // int pointer = part[0];
-    int pointer = part.last_write_pos; // 从上次写入的位置开始遍历
+    int pointer = part->last_write_pos; // 从上次写入的位置开始遍历
     std::vector<int> result;
     for (int unit_id : units)
     {
         while (cells[pointer]->obj_id != 0)
         {
-            pointer = pointer == part.end ? part.start : pointer % size + 1;
+            pointer = pointer == part->end ? part->start : pointer % size + 1;
         }
         // assert(pointer <= part[1] && "分区空间不足");
         Cell *cell = cells[pointer];
         cell->obj_id = obj_id;
         cell->unit_id = unit_id;
         cell->tag = tag;
-        part.free_cells--;
+        part->free_cells--;
         result.push_back(pointer);
-        pointer = pointer == part.end ? part.start : pointer % size + 1;
+        pointer = pointer == part->end ? part->start : pointer % size + 1;
     }
-    part.last_write_pos = pointer;
+    part->last_write_pos = pointer;
     return result;
 }

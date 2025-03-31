@@ -138,45 +138,82 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     part_tables.resize((tag_order.size() + 1) * 5 + 1);
 
     // 备份区初始化 {start, end, size, pointer}
-    part_tables[0] = {data_size + 1, size, back_size, data_size+1};
+    get_parts(0, 0).push_back(Part(data_size + 1, size, back_size, data_size+1, 0, 0));
+
+
+
     // 数据区初始化 {start, end, size, pointer}
     int pointer_temp = 1;
-    for (int tag_id : tag_order) {
+    for (int tag_id : tag_order) 
+    {
         int tag_id_end = pointer_temp + static_cast<int>(0.84*data_size * tag_size_rate[tag_id]) - 1;
         // 由大到小分配
-        if (IS_PART_BY_SIZE) {
-            for (int i = 5; i > 1; --i) {
+        if (IS_PART_BY_SIZE) 
+        {
+            // 分配 size为2-5的区
+            for (int i = 5; i > 1; --i) 
+            {
                 // 计算每个分区的 size = date_size*该tag比例*该tag对应大小i的比例
                 int size_temp = static_cast<int>(data_size * tag_size_rate[tag_id] * tag_size_db[tag_id][i - 1]);
                 size_temp = size_temp - size_temp % i; // 取整对齐粒度
-                part_tables[tag_id * 5 + i] = {pointer_temp, pointer_temp + size_temp - 1, size_temp, pointer_temp};
-                pointer_temp = part_tables[tag_id * 5 + i].end + 1;
+                auto& this_tables = get_parts(tag_id, i);
+                this_tables.push_back(Part(pointer_temp, pointer_temp + size_temp - 1, size_temp, pointer_temp, tag_id, i));
+                pointer_temp = this_tables.back().end + 1;
             }
         }
-        part_tables[tag_id * 5 + 1] = {pointer_temp, tag_id_end, tag_id_end - pointer_temp + 1, pointer_temp};
+        // 分配 size为1的区，如果不按大小分配，则所有size都分配到size=1区
+        get_parts(tag_id, 1).push_back(Part(pointer_temp, tag_id_end, tag_id_end - pointer_temp + 1, pointer_temp, tag_id, 1));
         pointer_temp = tag_id_end + 1;
+
     }
-  
+
+    
     // 调整边界
-    part_tables[tag_order.back() * 5 + 1].end = data_size;
-    part_tables[tag_order.back() * 5 + 1].free_cells = data_size - part_tables[tag_order.back() * 5 + 1].start + 1;
+    auto& this_tables = get_parts(tag_order.back(), 1);
+    if(this_tables.size() == 0) assert(false);
+    this_tables.back().end = data_size;
+    this_tables.back().free_cells = data_size - this_tables.back().start + 1;
     
     // 初始化单元
-    for (size_t i = 0; i < part_tables.size(); ++i) {
-        if (part_tables[i].free_cells == 0) continue;
-        for (int cell_id = part_tables[i].start; cell_id <= part_tables[i].end; ++cell_id) {
-            cells[cell_id]->part_idx = i;
+    // for (size_t i = 0; i < part_tables.size(); ++i) {
+    //     if (part_tables[i].free_cells == 0) continue;
+    //     for (int cell_id = part_tables[i].start; cell_id <= part_tables[i].end; ++cell_id) {
+    //         cells[cell_id]->part_idx = i;
+    //     }
+    // }
+    // 备份区初始化单元
+    for (auto& part : get_parts(0,0)) {
+        for (int cell_id = part.start; cell_id <= part.end; ++cell_id) {
+            cells[cell_id]->part = &part;
+        }
+    }
+    // 数据区初始化单元
+    for (int tag = 1; tag <= tag_order.size(); ++tag) {
+        for (int size = 1; size <= 5; ++size) {
+            for (auto& part : get_parts(tag, size)) {
+                for (int cell_id = part.start; cell_id <= part.end; ++cell_id) {
+                    cells[cell_id]->part = &part;
+                }
+            }
         }
     }
 
     // 标签间接反向
     if(IS_INTERVAL_REVERSE) {
-        part_tables[0].start, part_tables[0].end = part_tables[0].end, part_tables[0].start;
+        // part_tables[0].start, part_tables[0].end = part_tables[0].end, part_tables[0].start;
+        // 备份区反向
+        auto& back_tables = get_parts(0, 0);
+        back_tables[0].start, back_tables[0].end = back_tables[0].end, back_tables[0].start;
+
+        // 数据区间歇反向
         for(int i = 1; i<=tag_order.size(); i+=2) {
             for(int j=1; j<=5; ++j) {
-                part_tables[tag_order[i]*5+j].start, part_tables[tag_order[i]*5+j].end = part_tables[tag_order[i]*5+j].end, part_tables[tag_order[i]*5+j].start;
+                for(auto& part : get_parts(tag_order[i], j)) {
+                    part.start, part.end = part.end, part.start;
+                }
             }
         }
+        // 记录标签反向的对象
         for(int i = 1; i <= tag_order.size(); i+=2) {
             assert(tag_order[i-1] != 0);
             tag_reverse[tag_order[i-1]] = tag_order[i];

@@ -220,9 +220,9 @@ int Disk::_get_best_start(int timestamp)
     }
     // 找到离point最近的
     int start = point;
-    for (int i = 0; i < size-part_tables[0].free_cells; ++i)
+    for (int i = 0; i < size-get_parts(0, 0)[0].free_cells; ++i)
     {
-        start = start < part_tables[0].start ? start : 1;
+        start = start < get_parts(0, 0)[0].start ? start : 1;
         if (!cells[start]->req_ids.empty())
         {
             return start;
