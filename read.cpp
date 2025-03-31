@@ -78,23 +78,23 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
 {
 
     int start = _get_best_start(timestamp);
-    //if(TIME==2)
-    //debug(start);
+    // if(TIME==2)
+    // debug(start);
     if (start == -1)
     {
         return {"#", std::vector<int>()};
     }
     // 如果最佳起点读取代价大于剩余令牌数，则J
-    if ((start - point + size) % size > tokens-16)
+    if ((start - point + size) % size > tokens - 16)
     {
-        if((start < point or (point==1 &&  start > point))&& id==1){
-            debug(TIME,point);
+        if ((start < point or (point == 1 && start > point)) && id == 1)
+        {
+            debug(TIME, point);
         }
 
         point = start;
         prev_read_token = 80;
         return {"j " + std::to_string(start), std::vector<int>()};
-
     }
     // 如果最佳起点读取代价小于剩余令牌数，则读取
     else
@@ -113,29 +113,34 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
 
     int win_end = point;
     auto fo_seq = EMPTY_SEQUENCE;
-    for(int i = 0; i < 13; ++i){
+    for (int i = 0; i < 13; ++i)
+    {
         // 更新滑动窗口序列
         update_sequence(fo_seq, !cells[win_end]->req_ids.empty());
         win_end = win_end % size + 1;
     }
 
-    while(true){
+    while (true)
+    {
         auto decision = get_decision(prev_read_token, fo_seq);
-        if(tokens - decision.cost < 0){
+        if (tokens - decision.cost < 0)
+        {
             break;
         }
-        if(decision.is_r) 
+        if (decision.is_r)
         {
-            path.append(1, 'r'); 
+            path.append(1, 'r');
             auto completed_reqs_cell = cells[point]->read();
             completed_reqs.insert(completed_reqs.end(), completed_reqs_cell.begin(), completed_reqs_cell.end());
         }
-        else{
+        else
+        {
             path.append(1, 'p');
         }
         tokens -= decision.cost;
         prev_read_token = decision.next_token;
-        if(point == 1 && id==1){
+        if (point == 1 && id == 1)
+        {
             debug(TIME, point);
         }
         point = point % size + 1;
@@ -220,8 +225,9 @@ int Disk::_get_best_start(int timestamp)
     }
     // 找到离point最近的
     int start = point;
-    int start_start = -1;
-    for (int i = 0; i < size-part_tables[0][2]; ++i)
+
+    // 连续4个空，认定为零散点，触发扫盘。
+    for (int i = 0; i < 4; i++)
     {
         if (!cells[start]->req_ids.empty())
         {
@@ -230,4 +236,47 @@ int Disk::_get_best_start(int timestamp)
         start = start % size + 1;
     }
 
+    _get_consume_token(point, prev_read_token, point);
+    if (TIME%5000==0)
+    {
+        int tmp = point;
+        for (int i = 0; i<size; i++)
+        {
+            debug(tmp, consume_token_tmp[tmp]);
+            tmp = tmp % size + 1;
+        }
+        debug(TIME, "=====================================================");
+    }
+
+    for (int i = 0; i < size - part_tables[0][2] - 4; ++i)
+    {
+        if (!cells[start]->req_ids.empty())
+        {
+            return start;
+        }
+        start = start % size + 1;
+    }
+}
+
+void Disk::_get_consume_token(int start_point, int last_token, int target_point)
+{
+    // 初始化
+    int check_point = start_point;
+    auto fo_seq = EMPTY_SEQUENCE;
+    update_sequence(fo_seq, !cells[check_point]->req_ids.empty());
+    auto result_tmp = get_decision(prev_read_token, fo_seq);
+    consume_token_tmp[check_point] = result_tmp.cost;
+
+    int prev_point = check_point;
+    check_point = check_point % size + 1;
+
+    // 在target_point之前停止循环，所以扫盘需传入point作为target_point
+    while (check_point != target_point)
+    {
+        update_sequence(fo_seq, !cells[check_point]->req_ids.empty());
+        result_tmp = get_decision(prev_read_token, fo_seq);
+        consume_token_tmp[check_point] = consume_token_tmp[prev_point] + result_tmp.cost;
+        check_point = check_point % size + 1;
+        prev_point = prev_point % size + 1;
+    }
 }
