@@ -13,6 +13,7 @@
 class Disk;
 class Object;
 class Req;
+struct Part;
 struct Cell;
 
 extern std::vector<std::vector<std::vector<int>>> FRE;
@@ -29,14 +30,15 @@ struct Cell
     int obj_id; // 0 表示空闲
     int unit_id;
     int tag;
-    int part_idx;
-    Cell() : obj_id(0), unit_id(0), tag(0), part_idx(0) {}
+    Part* part;
+    Cell() : obj_id(0), unit_id(0), tag(0), part(nullptr) {}
     // 释放
     void free(){req_ids.clear(); obj_id = 0; unit_id = 0; tag = 0;}
     // 读取
     std::vector<int> read();
 };
 
+// 分区
 struct Part
 {
     int start;
@@ -46,34 +48,8 @@ struct Part
     int tag;
     int size;
     Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0) {}
-
-    [[deprecated("Dont use operator[], Please use member variables directly: start, end, free_cells, last_write_pos!")]]
-    Part(std::initializer_list<int> init) : start(0), end(0), free_cells(0), last_write_pos(0) {
-        int i = 0;
-        for (int val : init) {
-            if (i == 0) start = val;
-            else if (i == 1) end = val;
-            else if (i == 2) free_cells = val;
-            else if (i == 3) last_write_pos = val;
-            else if (i == 4) tag = val;
-            else if (i == 5) size = val;
-            i++;
-            if (i > 5) break;
-        }
-    }
-    // 标记为废弃，建议直接使用成员变量
-    [[deprecated("Dont use operator[], Please use member variables directly: start, end, free_cells, last_write_pos!")]]
-    int& operator[](int idx) {
-        switch(idx) {
-            case 0: return start;
-            case 1: return end;
-            case 2: return free_cells;
-            case 3: return last_write_pos;
-            case 4: return tag;
-            case 5: return size;
-            default: return start;
-        }
-    }
+    Part(int start, int end, int free_cells, int last_write_pos, int tag, int size) : 
+    start(start), end(end), free_cells(free_cells), last_write_pos(last_write_pos), tag(tag), size(size) {}
 };
 
 // 磁盘
@@ -85,7 +61,7 @@ public:
     int point;
     int size;
     int tokens;
-    std::vector<Part> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
+    std::vector<std::vector<Part>> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
     int back; // 备份区数量 0-2
     int prev_read_token;
     int req_cells_num = 0;
@@ -103,11 +79,11 @@ public:
 
     void init(int size, const std::vector<int> &tag_order, const std::vector<double> &tag_size_rate, const std::vector<std::vector<double>> &tag_size_db);
 
-    std::vector<Part>& get_parts(int tag, int size){}
+    std::vector<Part>& get_parts(int tag, int size){return part_tables[tag*5+size];}
 
     void free_cell(int cell_id);
 
-    std::vector<int> write(int obj_id, const std::vector<int> &units, int tag, int part_idx);
+    std::vector<int> write(int obj_id, const std::vector<int> &units, int tag, Part* part);
 
     void add_req(int req_id, const std::vector<int> &cells_idx);
 
@@ -179,7 +155,7 @@ public:
 
 private:
     // 获取磁盘和对应分区
-    std::vector<std::pair<int, int>> _get_disk(int obj_size, int tag);
+    std::vector<std::pair<int, Part*>> _get_disk(int obj_size, int tag);
 };
 
 // 读写删频率

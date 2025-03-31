@@ -85,7 +85,7 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
         return {"#", std::vector<int>()};
     }
     // 如果最佳起点读取代价大于剩余令牌数，则J
-    if ((start - point + size) % size > tokens - 16)
+    if ((start - point + size) % size > tokens)
     {
         if ((start < point or (point == 1 && start > point)) && id == 1)
         {
@@ -229,14 +229,16 @@ int Disk::_get_best_start(int timestamp)
     // 连续4个空，认定为零散点，触发扫盘。
     for (int i = 0; i < 4; i++)
     {
+        start = start < get_parts(0, 0)[0].start ? start : 1;
         if (!cells[start]->req_ids.empty())
         {
             return start;
         }
-        start = start % size + 1;
+        start = start % size + 1;        
     }
 
     _get_consume_token(point, prev_read_token, point);
+    
     if (TIME%5000==0)
     {
         int tmp = point;
@@ -248,8 +250,9 @@ int Disk::_get_best_start(int timestamp)
         debug(TIME, "=====================================================");
     }
 
-    for (int i = 0; i < size - part_tables[0][2] - 4; ++i)
+    for (int i = 0; i < size-get_parts(0, 0)[0].free_cells; ++i)
     {
+        start = start < get_parts(0, 0)[0].start ? start : 1;
         if (!cells[start]->req_ids.empty())
         {
             return start;
