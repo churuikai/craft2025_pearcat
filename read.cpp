@@ -119,13 +119,15 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     int win_end = point;
     auto fo_seq = EMPTY_SEQUENCE;
     int point_start = point;
+
+    bool arrive = false;
     for (int i = 0; i < 13; ++i)
     {
         // 更新滑动窗口序列
-        update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and (start - win_end) * (start - point_start) <= 0);
+        if(win_end == start) arrive = true;
+        update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and arrive);
         win_end = win_end % size + 1;
     }
-
     while (true)
     {
         auto decision = get_decision(prev_read_token, fo_seq);
@@ -136,8 +138,8 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         if (decision.is_r)
         {
             path.append(1, 'r');
-            req_cells_num -= cells[point]->req_ids.size();
             auto completed_reqs_cell = cells[point]->read();
+            // req_cells_num -= completed_reqs_cell.size();
             completed_reqs.insert(completed_reqs.end(), completed_reqs_cell.begin(), completed_reqs_cell.end());
         }
         else
@@ -147,7 +149,8 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         tokens -= decision.cost;
         prev_read_token = decision.next_token;
         point = point % size + 1;
-        update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and (start - win_end) * (start - point_start) <= 0);
+        if(win_end == start) arrive = true;
+        update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and arrive);
         win_end = win_end % size + 1;
     }
     return {path, completed_reqs, occupied_obj};
@@ -197,7 +200,11 @@ std::vector<int> Cell::read()
             {
                 for (int req_id : completed_reqs)
                 {
-                    DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
+                    if(DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
+                    {
+                        DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
+                        DISKS[disk_id].req_cells_num--;
+                    }
                 }
             }
         }
@@ -231,86 +238,76 @@ int Disk::_get_best_start(int timestamp)
 
     // 连续4个空，认定为零散点，触发扫盘。
     int count = 0;
-    //if (TIME >= 0)
-    if (TIME >= 50000 && TIME <= 80000)
+    // if (TIME >= 0)
+
+    for (int i = 0; i < 4; i++)
     {
-        for (int i = 0; i < 4; i++)
+        start = start < get_parts(0, 0)[0].start ? start : 1;
+        if (!cells[start]->req_ids.empty())
+        {
+            count++;
+            // return start;
+        }
+        start = start % size + 1;
+    }
+    start = point;
+    if (count < 1 and TIME >= 50000 && TIME <= 80000)
+    {
+        // if(id==1)
+        // {
+        //     debug(TIME, req_cells_num);
+        // }
+        _get_consume_token(start, prev_read_token, start == 1 ? size : start - 1);
+
+        // if (TIME%5000==0 and id==1)
+        // {
+        //     int tmp = point;
+        //     for (int i = 0; i<size; i++)
+        //     {
+        //         debug(tmp, consume_token_tmp[tmp]);
+        //         tmp = tmp % size + 1;
+        //     }
+        //     debug(TIME, "=====================================================");
+        // }
+
+        float max_earnings = 0;
+        float current_scores = 0;
+        float attenuation_rate = 1;
+        float gain_scores = 0;
+        float attenuation_scores = 0;
+        int abandon_reqs = 0;
+        int best_start = start;
+        for (int n = 0; n < (size - get_parts(0, 0)[0].free_cells) * 4 / 5; ++n)
+        // for (int n = 0; n < size; ++n)
         {
             start = start < get_parts(0, 0)[0].start ? start : 1;
-            if (!cells[start]->req_ids.empty())
+            abandon_reqs += cells[start]->req_ids.size();
+            gain_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs);
+            attenuation_scores = ((consume_token_tmp[point == 1 ? size : point - 1] - consume_token_tmp[start]) / G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
+            // current_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs) - attenuation_rate * (consume_token_tmp[start == 1?size:start-1]/G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
+            current_scores = gain_scores - attenuation_rate * attenuation_scores;
+            // current_scores = (consume_token_tmp[start] / G_float - (n > G_float ? 1 : n / G_float)) * req_cells_num - abandon_reqs * consume_token_tmp[start == 1 ? size : start - 1] / G_float;
+            // if (TIME == 61 && id == 8)
+            // {
+            //     debug(start, current_scores);
+            //     debug(req_cells_num, abandon_reqs);
+            // }
+            if (max_earnings <= current_scores)
             {
-                count++;
-                // return start;
+                max_earnings = current_scores;
+                best_start = start;
             }
             start = start % size + 1;
         }
-        if (count < 2)
+
+        if (max_earnings > 0)
         {
-
-            _get_consume_token(start, prev_read_token, start == 1 ? size : start - 1);
-
-            // if (TIME%5000==0)
-            // {
-            //     int tmp = point;
-            //     for (int i = 0; i<size; i++)
-            //     {
-            //         debug(tmp, consume_token_tmp[tmp]);
-            //         tmp = tmp % size + 1;
-            //     }
-            //     debug(TIME, "=====================================================");
-            // }
-
-            float max_earnings = 0;
-            float current_scores = 0;
-            float attenuation_rate = 1;
-            float gain_scores = 0;
-            float attenuation_scores = 0;
-            int abandon_reqs = 0;
-            int best_start = start;
-            for (int n = 0; n < (size - get_parts(0, 0)[0].free_cells) * 4 / 5; ++n)
-            // for (int n = 0; n < size; ++n)
-            {
-                start = start < get_parts(0, 0)[0].start ? start : 1;
-                abandon_reqs += cells[start]->req_ids.size();
-                gain_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs);
-                attenuation_scores = ((consume_token_tmp[point == 1 ? size : point - 1] - consume_token_tmp[start]) / G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
-                // current_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs) - attenuation_rate * (consume_token_tmp[start == 1?size:start-1]/G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
-                current_scores = gain_scores - attenuation_rate * attenuation_scores;
-                // current_scores = (consume_token_tmp[start] / G_float - (n > G_float ? 1 : n / G_float)) * req_cells_num - abandon_reqs * consume_token_tmp[start == 1 ? size : start - 1] / G_float;
-                // if (TIME == 61 && id == 8)
-                // {
-                //     debug(start, current_scores);
-                //     debug(req_cells_num, abandon_reqs);
-                // }
-                if (max_earnings < current_scores)
-                {
-                    max_earnings = current_scores;
-                    best_start = start;
-                }
-                start = start % size + 1;
-            }
-
-            if (max_earnings > 0)
-            {
-                // debug(TIME, id, point);
-                // debug(best_start);
-                return best_start;
-            }
-
-            start = point;
-            for (int i = 0; i < size - get_parts(0, 0)[0].free_cells; ++i)
-            {
-                start = start < get_parts(0, 0)[0].start ? start : 1;
-                if (!cells[start]->req_ids.empty())
-                {
-                    return start;
-                }
-                start = start % size + 1;
-            }
+            debug(TIME, id, point);
+            debug(best_start%size+1);
+            return best_start%size+1;
         }
-    }
-    else
-    {
+
+        start = point;
         for (int i = 0; i < size - get_parts(0, 0)[0].free_cells; ++i)
         {
             start = start < get_parts(0, 0)[0].start ? start : 1;
@@ -321,6 +318,20 @@ int Disk::_get_best_start(int timestamp)
             start = start % size + 1;
         }
     }
+
+    start = point;
+    for (int i = 0; i < size - get_parts(0, 0)[0].free_cells; ++i)
+    {
+        start = start < get_parts(0, 0)[0].start ? start : 1;
+        if (!cells[start]->req_ids.empty())
+        {
+            return start;
+        }
+        start = start % size + 1;
+    }
+
+    assert(false);
+    return -1;
 }
 
 void Disk::_get_consume_token(int start_point, int last_token, int target_point)
