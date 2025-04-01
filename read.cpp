@@ -124,7 +124,8 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     for (int i = 0; i < 13; ++i)
     {
         // 更新滑动窗口序列
-        if(win_end == start) arrive = true;
+        if (win_end == start)
+            arrive = true;
         update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and arrive);
         win_end = win_end % size + 1;
     }
@@ -149,7 +150,8 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         tokens -= decision.cost;
         prev_read_token = decision.next_token;
         point = point % size + 1;
-        if(win_end == start) arrive = true;
+        if (win_end == start)
+            arrive = true;
         update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and arrive);
         win_end = win_end % size + 1;
     }
@@ -200,7 +202,7 @@ std::vector<int> Cell::read()
             {
                 for (int req_id : completed_reqs)
                 {
-                    if(DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
+                    if (DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
                     {
                         DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
                         DISKS[disk_id].req_cells_num--;
@@ -240,7 +242,7 @@ int Disk::_get_best_start(int timestamp)
     int count = 0;
     // if (TIME >= 0)
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 3; i++)
     {
         start = start < get_parts(0, 0)[0].start ? start : 1;
         if (!cells[start]->req_ids.empty())
@@ -251,7 +253,8 @@ int Disk::_get_best_start(int timestamp)
         start = start % size + 1;
     }
     start = point;
-    if (count < 1 and TIME >= 50000 && TIME <= 80000)
+    // if (count < 1 and TIME >= 50000 && TIME <= 80000)
+    if (count < 1 and req_cells_num >= 850)
     {
         // if(id==1)
         // {
@@ -272,7 +275,7 @@ int Disk::_get_best_start(int timestamp)
 
         float max_earnings = 0;
         float current_scores = 0;
-        float attenuation_rate = 1;
+        float attenuation_rate = 1.1;
         float gain_scores = 0;
         float attenuation_scores = 0;
         int abandon_reqs = 0;
@@ -283,7 +286,9 @@ int Disk::_get_best_start(int timestamp)
             start = start < get_parts(0, 0)[0].start ? start : 1;
             abandon_reqs += cells[start]->req_ids.size();
             gain_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs);
-            attenuation_scores = ((consume_token_tmp[point == 1 ? size : point - 1] - consume_token_tmp[start]) / G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
+            // attenuation_scores = ((consume_token_tmp[point == 1 ? size : point - 1] - consume_token_tmp[start]) / G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
+            // gain_scores = (n / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs);
+            attenuation_scores = ((consume_token_tmp[point == 1 ? size : point - 1] - n) / G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
             // current_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs) - attenuation_rate * (consume_token_tmp[start == 1?size:start-1]/G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
             current_scores = gain_scores - attenuation_rate * attenuation_scores;
             // current_scores = (consume_token_tmp[start] / G_float - (n > G_float ? 1 : n / G_float)) * req_cells_num - abandon_reqs * consume_token_tmp[start == 1 ? size : start - 1] / G_float;
@@ -303,8 +308,8 @@ int Disk::_get_best_start(int timestamp)
         if (max_earnings > 0)
         {
             debug(TIME, id, point);
-            debug(best_start%size+1);
-            return best_start%size+1;
+            debug(best_start % size + 1);
+            return best_start % size + 1;
         }
 
         start = point;
