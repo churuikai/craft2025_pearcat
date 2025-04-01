@@ -78,8 +78,8 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
 {
 
     int start = _get_best_start(timestamp);
-    //if(TIME==2)
-    //debug(start);
+    // if(TIME==2)
+    // debug(start);
     if (start == -1)
     {
         return {"#", std::vector<int>()};
@@ -87,14 +87,9 @@ std::pair<std::string, std::vector<int>> Disk::read(int timestamp)
     // 如果最佳起点读取代价大于剩余令牌数，则J
     if ((start - point + size) % size > tokens)
     {
-        if((start < point or (point==1 &&  start > point))&& id==1){
-            debug(TIME,point);
-        }
-
         point = start;
         prev_read_token = 80;
         return {"j " + std::to_string(start), std::vector<int>()};
-
     }
     // 如果最佳起点读取代价小于剩余令牌数，则读取
     else
@@ -111,35 +106,48 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     std::vector<int> completed_reqs;
     std::vector<int> occupied_obj;
 
+    // if (point!=start)
+    // {
+    //     int data_length = size - get_parts(0, 0)[0].free_cells;
+    //     int p_length = (start + data_length - point) % data_length;
+    //     path.append(p_length, 'p');
+    //     tokens -= p_length;
+    //     prev_read_token = 80;
+    //     point = start;
+    // }
+
     int win_end = point;
     auto fo_seq = EMPTY_SEQUENCE;
-    for(int i = 0; i < 13; ++i){
+    int point_start = point;
+    for (int i = 0; i < 13; ++i)
+    {
         // 更新滑动窗口序列
-        update_sequence(fo_seq, !cells[win_end]->req_ids.empty());
+        update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and (start - win_end) * (start - point_start) <= 0);
         win_end = win_end % size + 1;
     }
 
-    while(true){
+    while (true)
+    {
         auto decision = get_decision(prev_read_token, fo_seq);
-        if(tokens - decision.cost < 0){
+        if (tokens - decision.cost < 0)
+        {
             break;
         }
-        if(decision.is_r) 
+        if (decision.is_r)
         {
-            path.append(1, 'r'); 
+            path.append(1, 'r');
+            req_cells_num -= cells[point]->req_ids.size();
             auto completed_reqs_cell = cells[point]->read();
             completed_reqs.insert(completed_reqs.end(), completed_reqs_cell.begin(), completed_reqs_cell.end());
         }
-        else{
+        else
+        {
             path.append(1, 'p');
         }
         tokens -= decision.cost;
         prev_read_token = decision.next_token;
-        if(point == 1 && id==1){
-            debug(TIME, point);
-        }
         point = point % size + 1;
-        update_sequence(fo_seq, !cells[win_end]->req_ids.empty());
+        update_sequence(fo_seq, !cells[win_end]->req_ids.empty() and (start - win_end) * (start - point_start) <= 0);
         win_end = win_end % size + 1;
     }
     return {path, completed_reqs, occupied_obj};
@@ -220,15 +228,147 @@ int Disk::_get_best_start(int timestamp)
     }
     // 找到离point最近的
     int start = point;
-    for (int i = 0; i < size-get_parts(0, 0)[0].free_cells; ++i)
-    {
-        start = start < get_parts(0, 0)[0].start ? start : 1;
-        if (!cells[start]->req_ids.empty())
-        {
-            return start;
-        }
-        start = start % size + 1;        
-    }
-    assert(false);
 
+    // 连续4个空，认定为零散点，触发扫盘。
+    int count = 0;
+    //if (TIME >= 0)
+    if (TIME >= 50000 && TIME <= 80000)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            start = start < get_parts(0, 0)[0].start ? start : 1;
+            if (!cells[start]->req_ids.empty())
+            {
+                count++;
+                // return start;
+            }
+            start = start % size + 1;
+        }
+        if (count < 2)
+        {
+
+            _get_consume_token(start, prev_read_token, start == 1 ? size : start - 1);
+
+            // if (TIME%5000==0)
+            // {
+            //     int tmp = point;
+            //     for (int i = 0; i<size; i++)
+            //     {
+            //         debug(tmp, consume_token_tmp[tmp]);
+            //         tmp = tmp % size + 1;
+            //     }
+            //     debug(TIME, "=====================================================");
+            // }
+
+            float max_earnings = 0;
+            float current_scores = 0;
+            float attenuation_rate = 1;
+            float gain_scores = 0;
+            float attenuation_scores = 0;
+            int abandon_reqs = 0;
+            int best_start = start;
+            for (int n = 0; n < (size - get_parts(0, 0)[0].free_cells) * 4 / 5; ++n)
+            // for (int n = 0; n < size; ++n)
+            {
+                start = start < get_parts(0, 0)[0].start ? start : 1;
+                abandon_reqs += cells[start]->req_ids.size();
+                gain_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs);
+                attenuation_scores = ((consume_token_tmp[point == 1 ? size : point - 1] - consume_token_tmp[start]) / G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
+                // current_scores = (consume_token_tmp[start] / G_float - (n > G ? 1 : n / G_float)) * (req_cells_num - abandon_reqs) - attenuation_rate * (consume_token_tmp[start == 1?size:start-1]/G_float + (n > G ? 1 : n / G_float)) * abandon_reqs;
+                current_scores = gain_scores - attenuation_rate * attenuation_scores;
+                // current_scores = (consume_token_tmp[start] / G_float - (n > G_float ? 1 : n / G_float)) * req_cells_num - abandon_reqs * consume_token_tmp[start == 1 ? size : start - 1] / G_float;
+                // if (TIME == 61 && id == 8)
+                // {
+                //     debug(start, current_scores);
+                //     debug(req_cells_num, abandon_reqs);
+                // }
+                if (max_earnings < current_scores)
+                {
+                    max_earnings = current_scores;
+                    best_start = start;
+                }
+                start = start % size + 1;
+            }
+
+            if (max_earnings > 0)
+            {
+                // debug(TIME, id, point);
+                // debug(best_start);
+                return best_start;
+            }
+
+            start = point;
+            for (int i = 0; i < size - get_parts(0, 0)[0].free_cells; ++i)
+            {
+                start = start < get_parts(0, 0)[0].start ? start : 1;
+                if (!cells[start]->req_ids.empty())
+                {
+                    return start;
+                }
+                start = start % size + 1;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < size - get_parts(0, 0)[0].free_cells; ++i)
+        {
+            start = start < get_parts(0, 0)[0].start ? start : 1;
+            if (!cells[start]->req_ids.empty())
+            {
+                return start;
+            }
+            start = start % size + 1;
+        }
+    }
+}
+
+void Disk::_get_consume_token(int start_point, int last_token, int target_point)
+{
+    // 初始化
+    int prev_point = start_point;
+    int check_point = start_point;
+    auto fo_seq = EMPTY_SEQUENCE;
+    int read_token_tmp = last_token;
+    int continue_f_count = 0;
+    for (int i = 0; i < 13; ++i)
+    {
+        // 更新滑动窗口序列
+        update_sequence(fo_seq, !cells[check_point]->req_ids.empty());
+        check_point = check_point % size + 1;
+    }
+    if (cells[prev_point]->req_ids.empty())
+    {
+        continue_f_count++;
+    }
+    auto result_tmp = get_decision(read_token_tmp, fo_seq);
+    consume_token_tmp[prev_point] = result_tmp.cost;
+    read_token_tmp = result_tmp.next_token;
+
+    // 在target_point之前停止循环，所以扫盘需传入point作为target_point
+    while (prev_point != target_point)
+    {
+        update_sequence(fo_seq, !cells[check_point]->req_ids.empty());
+        result_tmp = get_decision(read_token_tmp, fo_seq);
+        prev_point = prev_point % size + 1;
+        if (cells[prev_point]->req_ids.empty())
+        {
+            continue_f_count++;
+        }
+        else
+        {
+            continue_f_count = 0;
+        }
+
+        if (continue_f_count >= G)
+        {
+            consume_token_tmp[prev_point] = consume_token_tmp[prev_point == 1 ? size : prev_point - 1];
+        }
+        else
+        {
+            consume_token_tmp[prev_point] = consume_token_tmp[prev_point == 1 ? size : prev_point - 1] + result_tmp.cost;
+            read_token_tmp = result_tmp.next_token;
+        }
+        check_point = check_point % size + 1;
+    }
 }
