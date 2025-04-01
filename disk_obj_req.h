@@ -1,14 +1,10 @@
 #pragma once
-
 #include "constants.h"
 #include <vector>
-#include <unordered_map>
 #include <unordered_set>
 #include <cassert>
-
 #include "tools.h"
 
-// 全局变量声明
 // 前向声明
 class Disk;
 class Object;

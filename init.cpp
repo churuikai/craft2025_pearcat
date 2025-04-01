@@ -99,21 +99,46 @@ void init_input() {
         tag_order.push_back(min_diff_tag);
     }
  
-    debug(tag_order);
+    // debug(tag_order);
 
     // tag_order = {14, 13, 15, 9, 11, 2, 5, 6, 7, 10, 4, 8, 1, 12, 16, 3};
     // tag_order = {14, 3, 13, 16, 15, 12, 9, 1, 11, 8, 2, 4, 5,10, 6, 7};
     // tag_order = {9, 1, 13, 16, 15, 12,  11, 8, 5,10, 6, 7,  2, 4,3,14};
     // tag_order = {14, 7, 13, 10, 15, 4, 9, 8, 11, 1, 2, 12, 5,16, 6, 3};
     // tag_order = {13, 14, 1, 5, 9, 10, 4, 3, 6, 15, 7, 8, 2, 12, 16, 11}; // official
-    tag_order = {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11}; // official
+    tag_order = {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11}; // official 最高
     // tag_order = {13, 6, 14, 15, 1,7, 5,8, 9,2, 10,12, 4,16, 3,11}; // official
     // tag_order = {13, 11, 14, 16, 1, 12, 5, 2, 9, 8, 10, 7, 4, 15, 3, 6};
+    std::vector<std::vector<int>> tag_orders = {
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+        {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11},
+    };
+    // std::vector<std::vector<int>> tag_orders = {
+    //     {9, 2, 10, 15, 4,16, 5,8},
+    //     {9, 2, 10, 15, 4,16, 5,8},
+    //     {9, 2, 10, 15, 4,16, 5,8},
+    //     {9, 2, 10, 15, 4,16, 5,8},
+    //     {9, 2, 10, 15, 4,16, 5,8},
+    //     {13, 6, 14, 12, 1,7, 3,11},
+    //     {13, 6, 14, 12, 1,7, 3,11},
+    //     {13, 6, 14, 12, 1,7, 3,11},
+    //     {13, 6, 14, 12, 1,7, 3,11},
+    //     {13, 6, 14, 12, 1,7, 3,11},
+    // };
+
     // 初始化各个磁盘
     for (int i = 1; i <= N; ++i) {
         DISKS[i].id = i;
         DISKS[i].back = BACK_NUM;
-        DISKS[i].init(V, tag_order, TAG_SIZE_RATE, TAG_SIZE_DB);
+        DISKS[i].init(V, tag_orders[i-1], TAG_SIZE_RATE, TAG_SIZE_DB);
     }
 } 
 
@@ -128,14 +153,30 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     for (int i = 1; i <= size; i++) {
         cells[i] = new Cell();
     }
+
+    // 调整比例
+    auto this_tag_size_rate = tag_size_rate;
+    float all_rate = 0;
+    for(int tag: tag_order) {
+        all_rate += this_tag_size_rate[tag];
+    }
+
+    for(int tag: tag_order) {
+        this_tag_size_rate[tag] /= all_rate;
+    }
+
+    float data_rate = all_rate*(1.0*M/tag_order.size());
     
     // 磁盘分区
     // tag 0 : 备份区，占比 90%*back/3*size
     // tag 1.1 1.2 1.3 1.4 1.5 ~M.1 M.2 M.3 M.4 M.5 : 数据区，占比 size-90%*back/3*size
     int back_size = this->back == 0 ? 0 : static_cast<int>(0.305 * this->back * size) + 1;
     int data_size = size - back_size;
+    //调整
+    data_size = static_cast<int>(data_size * data_rate);
+    back_size = this->back == 0 ? 0 : size - data_size;
     
-    part_tables.resize((tag_order.size() + 1) * 5 + 1);
+    part_tables.resize((M + 1) * 5 + 1);
 
     // 备份区初始化 {start, end, size, pointer}
     get_parts(0, 0).push_back(Part(data_size + 1, size, back_size, data_size+1, 0, 0));
@@ -146,7 +187,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     int pointer_temp = 1;
     for (int tag_id : tag_order) 
     {
-        int tag_id_end = pointer_temp + static_cast<int>(0.84*data_size * tag_size_rate[tag_id]) - 1;
+        int tag_id_end = pointer_temp + static_cast<int>(0.85*data_size * this_tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) 
         {
@@ -154,7 +195,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             for (int i = 5; i > 1; --i) 
             {
                 // 计算每个分区的 size = date_size*该tag比例*该tag对应大小i的比例
-                int size_temp = static_cast<int>(data_size * tag_size_rate[tag_id] * tag_size_db[tag_id][i - 1]);
+                int size_temp = static_cast<int>(data_size * this_tag_size_rate[tag_id] * tag_size_db[tag_id][i - 1]);
                 size_temp = size_temp - size_temp % i; // 取整对齐粒度
                 auto& this_tables = get_parts(tag_id, i);
                 this_tables.push_back(Part(pointer_temp, pointer_temp + size_temp - 1, size_temp, pointer_temp, tag_id, i));
@@ -164,7 +205,6 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
         // 分配 size为1的区，如果不按大小分配，则所有size都分配到size=1区
         get_parts(tag_id, 1).push_back(Part(pointer_temp, tag_id_end, tag_id_end - pointer_temp + 1, pointer_temp, tag_id, 1));
         pointer_temp = tag_id_end + 1;
-
     }
 
     
@@ -174,13 +214,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     this_tables.back().end = data_size;
     this_tables.back().free_cells = data_size - this_tables.back().start + 1;
     
-    // 初始化单元
-    // for (size_t i = 0; i < part_tables.size(); ++i) {
-    //     if (part_tables[i].free_cells == 0) continue;
-    //     for (int cell_id = part_tables[i].start; cell_id <= part_tables[i].end; ++cell_id) {
-    //         cells[cell_id]->part_idx = i;
-    //     }
-    // }
+
     // 备份区初始化单元
     for (auto& part : get_parts(0,0)) {
         for (int cell_id = part.start; cell_id <= part.end; ++cell_id) {
@@ -188,7 +222,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
         }
     }
     // 数据区初始化单元
-    for (int tag = 1; tag <= tag_order.size(); ++tag) {
+    for (int tag: tag_order) {
         for (int size = 1; size <= 5; ++size) {
             for (auto& part : get_parts(tag, size)) {
                 for (int cell_id = part.start; cell_id <= part.end; ++cell_id) {

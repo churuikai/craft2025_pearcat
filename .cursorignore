@@ -1,0 +1,19 @@
+.in
+.vscode
+.gitignore
+.cursorignore
+.git
+.idea
+.vscode
+
+.zip
+/test/
+/build/
+*.log
+log.txt
+debug.txt
+result.txt
+/replay/*.txt
+
+
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
