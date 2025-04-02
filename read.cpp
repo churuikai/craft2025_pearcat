@@ -263,7 +263,7 @@ std::vector<int> Cell::read()
             {
                 for (int req_id : completed_reqs)
                 {
-                    if(DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
+                    if (DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
                     {
                         DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
                         DISKS[disk_id].req_cells_num--;
