@@ -17,6 +17,11 @@
 std::vector<std::vector<std::vector<int>>> FRE;
 int T, M, N, V, G, k, TIME;
 
+// 频率相关全局变量
+std::vector<int> current_read_freq;
+std::vector<int> current_write_freq;
+std::vector<int> current_delete_freq;
+
 Disk DISKS[MAX_DISK_NUM];
 Object OBJECTS[MAX_OBJECT_NUM];
 Req REQS[LEN_REQ];

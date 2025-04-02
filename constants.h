@@ -30,6 +30,10 @@ inline const int REP_NUM = 3;
 inline const int EXTRA_TIME = 105;
 inline const int MAX_G = 1000;
 
+
+// 负载系数
+inline const float LOAD_COEFFICIENT = 8.36287e-07;
+
 // 复杂常量也可以用inline
 // inline const std::vector<double> TAG_SIZE_RATE = {0, 
 // 0.09681, 0.0393 , 0.10434, 0.09115, 0.04644, 0.02577, 0.09509, 0.07413,

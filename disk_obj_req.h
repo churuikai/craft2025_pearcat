@@ -19,6 +19,8 @@ extern Disk DISKS[MAX_DISK_NUM];
 extern Object OBJECTS[MAX_OBJECT_NUM];
 extern Req REQS[LEN_REQ];
 
+
+
 // 磁盘点
 struct Cell
 {
@@ -67,6 +69,9 @@ public:
 
     int data_size1;
     int data_size2;
+
+    // 当前负载系数
+    float load_coefficient = 1.0;
     
     // 磁盘分区 [start, end, free_cells, 上次写入的位置]
     std::vector<std::vector<Part>> part_tables; 
@@ -172,6 +177,10 @@ private:
 
 
 // 函数声明
+// 频率相关函数声明
+int get_freq(int tag, int timestamp, int op_type); // 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
+int get_min_read_tag(); // 获取当前时间读频率最小的tag
+
 void init_input();
 void process_timestamp(int timestamp, Controller &controller);
 void process_delete(Controller &controller);

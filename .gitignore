@@ -21,3 +21,6 @@ result.txt
 *.temp
 .cache/
 /test/ 
+
+code_craft*
+/run/interactor*

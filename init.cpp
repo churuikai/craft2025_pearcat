@@ -2,6 +2,31 @@
 #include "disk_obj_req.h"
 #include <limits>
 #include "debug.h"
+
+// 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
+int get_freq(int tag, int timestamp, int op_type) {
+    if (tag <= 0 || tag > M || timestamp <= 0 || timestamp > T)
+        return 0;
+    
+    int slice_idx = (timestamp - 1) / FRE_PER_SLICING + 1;
+    return FRE[tag][slice_idx][op_type];
+}
+
+// 获取当前TIME读频率最小的tag
+int get_min_read_tag() {
+    int min_tag = 1;
+    int min_freq = get_freq(1, TIME, 2); // 2表示读取频率
+    
+    for (int tag = 2; tag <= M; ++tag) {
+        int freq = get_freq(tag, TIME, 2);
+        if (freq < min_freq) {
+            min_freq = freq;
+            min_tag = tag;
+        }
+    }
+    return min_tag;
+}
+
 void init_input() {
     // 读取基本参数
     scanf("%d%d%d%d%d%d", &T, &M, &N, &V, &G, &k);
@@ -11,6 +36,7 @@ void init_input() {
     // 初始化频率数据
     FRE.resize(MAX_TAG_NUM + 1, std::vector<std::vector<int>>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, std::vector<int>(3, 0)));
     
+
     // 读取删除频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id) {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
