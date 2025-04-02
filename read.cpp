@@ -87,9 +87,9 @@ std::pair<std::vector<std::string>, std::vector<int>> Controller::read()
 
 std::pair<std::string, std::vector<int>> Disk::read(int op_id)
 {
-    int &point = op_id == 1 ? point1 : point2;
-    int &tokens = op_id == 1 ? tokens1 : tokens2;
-    int &prev_read_token = op_id == 1 ? prev_read_token1 : prev_read_token2;
+    int &point =            op_id == 1 ? point1 : point2;
+    int &tokens =           op_id == 1 ? tokens1 : tokens2;
+    int &prev_read_token =  op_id == 1 ? prev_read_token1 : prev_read_token2;
 
 
     int start = _get_best_start(op_id);
