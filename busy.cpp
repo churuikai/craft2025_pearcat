@@ -48,5 +48,7 @@ void process_busy(Controller &controller)
     {
         debug("some busy==================================================================================");
         debug(TIME, busy_req_ids.size());
+        debug(controller.activate_reqs.size());
+        debug(1.0*G/controller.activate_reqs.size()/N/V);
     }
 }

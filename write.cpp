@@ -101,9 +101,7 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
     obj.tag = tag;
 
     // 获取磁盘
-    debug(obj_id);
     auto space = _get_disk(obj_size, tag);
-    debug("disk find ok");
     assert(space.size() == 3);
 
     if (space.empty())
