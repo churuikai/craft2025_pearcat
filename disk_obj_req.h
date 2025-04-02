@@ -13,7 +13,7 @@ struct Part;
 struct Cell;
 
 extern std::vector<std::vector<std::vector<int>>> FRE;
-extern int T, M, N, V, G, TIME;
+extern int T, M, N, V, G, k, TIME;
 inline float G_float;
 extern Disk DISKS[MAX_DISK_NUM];
 extern Object OBJECTS[MAX_OBJECT_NUM];
@@ -53,16 +53,30 @@ class Disk
 {
 public:
     int id;
-    Cell** cells; // 改为指针数组
-    int point;
     int size;
-    int tokens;
-    std::vector<std::vector<Part>> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
+    Cell** cells; // 改为指针数组
+    
+    int point1;
+    int point2;
+
+    int tokens1;
+    int tokens2;
+
+    int prev_read_token1;
+    int prev_read_token2;
+
+    int data_size1;
+    int data_size2;
+    
+    // 磁盘分区 [start, end, free_cells, 上次写入的位置]
+    std::vector<std::vector<Part>> part_tables; 
+    
     int back; // 备份区数量 0-2
-    int prev_read_token;
     int req_cells_num = 0;
     int consume_token_tmp[MAX_DISK_SIZE];
-    IncIDMap<Int16Array> req_pos; // 请求位置 {req_id: [pos1, pos2, ...]}
+
+    // 请求位置 {req_id: [pos1, pos2, ...]}
+    IncIDMap<Int16Array> req_pos; 
 
     //标签间接反向, 该标签对应的标签
     int tag_reverse[MAX_TAG_NUM+1] = {0};
@@ -70,7 +84,7 @@ public:
     // 分片存储策略
     // int tag_free_count[MAX_TAG_NUM+1] = {0};
 
-    Disk() : id(0), point(1), size(0), tokens(0), back(0), prev_read_token(80), cells(nullptr) {}
+    Disk() : id(0), point1(1), point2(1), size(0), tokens1(0), tokens2(0), back(0), prev_read_token1(80), prev_read_token2(80), cells(nullptr) {}
     ~Disk();
 
     void init(int size, const std::vector<int> &tag_order, const std::vector<double> &tag_size_rate, const std::vector<std::vector<double>> &tag_size_db);
@@ -85,11 +99,11 @@ public:
 
     void remove_req(int req_id);
 
-    std::pair<std::string, std::vector<int>> read(int timestamp);
+    std::pair<std::string, std::vector<int>> read(int op_id);
 
-    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start);
+    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
 
-    int _get_best_start(int timestamp);
+    int _get_best_start(int op_id);
 
     void _get_consume_token(int start_point, int last_token, int target_point);
 };
@@ -163,3 +177,5 @@ void process_timestamp(int timestamp, Controller &controller);
 void process_delete(Controller &controller);
 void process_write(Controller &controller);
 void process_read(Controller &controller);
+void process_busy(Controller &controller);
+void process_gc(Controller &controller);

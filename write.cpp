@@ -2,7 +2,7 @@
 #include "constants.h"
 #include <iostream>
 #include <algorithm>
-// #include "debug.h"
+#include "debug.h"
 
 void process_write(Controller &controller)
 {
@@ -38,6 +38,7 @@ std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
     // 优先选择对应tag对应size分区有空闲空间的磁盘
     std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; tag_list[tag + 1] = 0;
     std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5}; size_list[obj_size] = 0;
+    std::vector<int> op_list = (TIME % 2 == 0) ? std::vector<int>{0, 1} : std::vector<int>{1, 0};
     for (int tag_ : tag_list)
     {
         if (space.size() == 3 - BACK_NUM) break;
@@ -53,8 +54,12 @@ std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
                 if (space.size() == 3 - BACK_NUM) break;
                 if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p){ return p.first == disk_id; }))continue;
                 tag_ = tag_ == -1 ? DISKS[disk_id].tag_reverse[tag] : tag_;
-                for(auto& part : DISKS[disk_id].get_parts(tag_, size_)) 
+                // for(auto& part : DISKS[disk_id].get_parts(tag_, size_)) 
+                for(int part_idx : op_list) 
                 {
+                    auto& parts = DISKS[disk_id].get_parts(tag_, size_);
+                    if(parts.size() == 0) continue;
+                    Part& part = parts[part_idx];
                     if (part.free_cells >= obj_size)
                     {
                         space.push_back({disk_id, &part});
@@ -92,7 +97,9 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
     obj.tag = tag;
 
     // 获取磁盘
+    debug(obj_id);
     auto space = _get_disk(obj_size, tag);
+    debug("disk find ok");
     assert(space.size() == 3);
 
     if (space.empty())

@@ -5,6 +5,7 @@
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
 inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
+inline const float DATA_COMPRESSION = 0.85; // 数据压缩系数 0-1
 
 //是否间隔反向
 inline const int IS_INTERVAL_REVERSE = 1; // 0-1
@@ -24,7 +25,7 @@ inline const int MAX_DISK_NUM = (10 + 1);
 inline const int MAX_DISK_SIZE = (16384 + 1);
 inline const int MAX_REQUEST_NUM = (30000000 + 1);
 inline const int MAX_OBJECT_NUM = (100000 + 1);
-inline const int LEN_REQ = 20000000;
+inline const int LEN_REQ = 30000000;
 inline const int REP_NUM = 3;
 inline const int EXTRA_TIME = 105;
 inline const int MAX_G = 1000;
@@ -38,7 +39,11 @@ inline const int MAX_G = 1000;
 // 0.02874, 0.06872, 0.0834, 0.04642, 0.05478, 0.04244, 0.04744, 0.11655, 0.07079, 0.06028, 0.05884, 0.12248, 0.03096, 0.02991, 0.08102, 0.05724};
 // practice_sample 平均空间比例
 inline const std::vector<double> TAG_SIZE_RATE = {0, 
-0.02979, 0.07901, 0.08115, 0.0504, 0.04575, 0.03406, 0.05187, 0.13116, 0.05194, 0.05071, 0.07502, 0.13919, 0.03231, 0.03073, 0.06192, 0.05499};
+// 0.02979, 0.07901, 0.08115, 0.0504, 0.04575, 0.03406, 0.05187, 0.13116, 0.05194, 0.05071, 0.07502, 0.13919, 0.03231, 0.03073, 0.06192, 0.05499};
+// 最大
+//0.04382, 0.03351, 0.08671, 0.03259, 0.02644, 0.06361, 0.03313, 0.07751, 0.10603, 0.10348, 0.10236, 0.03677, 0.04107, 0.08086, 0.03159, 0.10052};
+// 平均
+0.03876, 0.03247, 0.09164, 0.03058, 0.02741, 0.06192, 0.02994, 0.08011, 0.11053, 0.10182, 0.11233, 0.03517, 0.03835, 0.08068, 0.03041, 0.09789};
 inline const std::vector<std::vector<double>> TAG_SIZE_DB = {
 {{}, 
     {0.74563, 0.08354, 0.08603, 0.0586, 0.02618}, 

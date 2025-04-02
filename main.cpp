@@ -15,7 +15,7 @@
 #include <cstdlib>
 
 std::vector<std::vector<std::vector<int>>> FRE;
-int T, M, N, V, G, TIME;
+int T, M, N, V, G, k, TIME;
 
 Disk DISKS[MAX_DISK_NUM];
 Object OBJECTS[MAX_OBJECT_NUM];
@@ -31,28 +31,15 @@ void process_timestamp(int timestamp, Controller& controller) {
     scanf("%*s%*d");
     // 更新各个磁盘的tokens
     for (int i = 1; i <= N; ++i) {
-        DISKS[i].tokens = G;
+        DISKS[i].tokens1 = G;
+        DISKS[i].tokens2 = G;
     }
     
     // 同步时间
     controller.sync(timestamp);
     TIME = timestamp;
 
-    // 清理长周期的请求
-    // if (timestamp % 40 == 0) {
-    //     for (int req_id : controller.activate_reqs) {
-    //         if (REQS[req_id % LEN_REQ].timestamp + 105 < timestamp) {
-    //             controller.activate_reqs.erase(req_id);
-    //         // 释放磁盘
-    //         for (auto &[disk_id, cell_idxs] : OBJECTS[REQS[req_id % LEN_REQ].obj_id].replicas) {
-    //             for (int cell_idx : cell_idxs) {
-    //                     DISKS[disk_id].cells[cell_idx].req_ids.erase(req_id);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    
+
     printf("TIMESTAMP %d\n", timestamp);
     fflush(stdout);
 }
@@ -66,8 +53,6 @@ int main() {
     // 输出预处理完成
     printf("OK\n");
     fflush(stdout);
-    // std::cout << "OK" << std::endl;
-    // std::cout.flush();
     
     // 处理每个时间片
     for (int timestamp = 1; timestamp <= T + EXTRA_TIME; ++timestamp) {
@@ -82,6 +67,15 @@ int main() {
         
         // 处理读取事件
         process_read(controller);
+        
+        // 处理繁忙事件
+        process_busy(controller);
+
+        // 处理垃圾回收事件, 每1800时间片执行一次
+        if (timestamp % 1800 == 0) {
+            process_gc(controller);
+        }
+
     }
     
     return 0;
