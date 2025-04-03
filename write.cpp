@@ -40,8 +40,8 @@ std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
     std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; tag_list[tag + 1] = 0;
     std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5}; size_list[obj_size] = 0;
     std::vector<int> op_list = {0, 1};
-    std::random_device rd;
-    std::mt19937 gen(rd());
+
+    std::mt19937 gen(42); 
     std::shuffle(op_list.begin(), op_list.end(), gen);
     for (int tag_ : tag_list)
     {

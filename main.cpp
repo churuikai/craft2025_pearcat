@@ -1,5 +1,6 @@
 #include "constants.h"
 #include "disk_obj_req.h"
+#include "debug.h"
 #include <iostream>
 #include <vector>
 #include <unordered_set>
@@ -79,9 +80,13 @@ int main() {
         // 处理垃圾回收事件, 每1800时间片执行一次
         if (timestamp % 1800 == 0) {
             process_gc(controller);
+            debug(timestamp, controller.busy_count);
+            debug(timestamp, controller.over_load_count);
         }
 
+
     }
+
     
     return 0;
 }

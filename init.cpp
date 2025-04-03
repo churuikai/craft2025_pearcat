@@ -5,9 +5,8 @@
 
 // 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
 int get_freq(int tag, int timestamp, int op_type) {
-    if (tag <= 0 || tag > M || timestamp <= 0 || timestamp > T)
-        return 0;
-    
+    // if (tag <= 0 || tag > M || timestamp <= 0 || timestamp > T)
+    //     return 0;
     int slice_idx = (timestamp - 1) / FRE_PER_SLICING + 1;
     return FRE[tag][slice_idx][op_type];
 }
@@ -25,6 +24,15 @@ int get_min_read_tag() {
         }
     }
     return min_tag;
+}
+
+// 获取排序后的当前TIME读频率的tag
+std::vector<int> get_sorted_read_tag() {
+    std::vector<int> tag_order = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+    std::sort(tag_order.begin(), tag_order.end(), [](int a, int b) {
+        return get_freq(a, TIME, 2) < get_freq(b, TIME, 2);
+    });
+    return tag_order;
 }
 
 void init_input() {
