@@ -1,5 +1,6 @@
 #include "constants.h"
 #include "disk_obj_req.h"
+#include "data_analysis.h"
 #include "debug.h"
 #include <iostream>
 #include <vector>
@@ -14,14 +15,6 @@
 #include <cstdio>
 #include <cassert>
 #include <cstdlib>
-
-std::vector<std::vector<std::vector<int>>> FRE;
-int T, M, N, V, G, k, TIME;
-
-// 频率相关全局变量
-std::vector<int> current_read_freq;
-std::vector<int> current_write_freq;
-std::vector<int> current_delete_freq;
 
 Disk DISKS[MAX_DISK_NUM];
 Object OBJECTS[MAX_OBJECT_NUM];
@@ -52,14 +45,30 @@ void process_timestamp(int timestamp, Controller& controller) {
 
 
 int main() {
-    // 创建文件管理器
 
-    init_input();
+    // 清理debug和info日志
+    init_logs();
+
+    // 读取常量输入
+    scanf("%d%d%d%d%d%d", &T, &M, &N, &V, &G, &k);
+    G_float = G;
+
+    info("=============================================================");
+    info("T: "+ std::to_string(T)+", M: "+ std::to_string(M)+", N: "+ std::to_string(N)+", V: "+ std::to_string(V)+", G: "+ std::to_string(G)+", k: "+ std::to_string(k));
+
+    // 预处理数据分析
+    process_data_analysis();
+
+    // 初始化磁盘和对象
+    init();
+
+    // 创建文件管理器
     Controller controller;
+
     // 输出预处理完成
     printf("OK\n");
     fflush(stdout);
-    
+
     // 处理每个时间片
     for (int timestamp = 1; timestamp <= T + EXTRA_TIME; ++timestamp) {
         // 处理时间戳事件
@@ -80,13 +89,13 @@ int main() {
         // 处理垃圾回收事件, 每1800时间片执行一次
         if (timestamp % 1800 == 0) {
             process_gc(controller);
-            debug(timestamp, controller.busy_count);
-            debug(timestamp, controller.over_load_count);
         }
-
 
     }
 
-    
-    return 0;
+    info("=============================================================");
+    info("busy_count: ", controller.busy_count);
+    info("over_load_count: ", controller.over_load_count);
+    info("=============================================================");
+    info("OVER");
 }

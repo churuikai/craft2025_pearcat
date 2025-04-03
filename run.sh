@@ -7,7 +7,7 @@ fi
 cd build
 
 # 运行cmake
-cmake .. -DCMAKE_CXX_FLAGS="-DDEBUG"
+cmake .. -DCMAKE_CXX_FLAGS="-DDEBUG -DINFO"
 if [ $? -ne 0 ]; then
     echo "CMake失败，错误代码 $?"
     cd ..
@@ -27,4 +27,4 @@ cd ..
 echo "构建成功！"
 
 # 运行Python脚本
-python run/run.py run/interactor run/sample_practice.in ./code_craft -d 9000
+python run/run.py run/interactor run/sample_practice.in ./code_craft

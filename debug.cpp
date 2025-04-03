@@ -1,10 +1,16 @@
 #include "debug.h"
 
 #ifdef DEBUG
-
 // 全局调试计数初始化
 int DEBUG_COUNT = 0;
+#endif
 
+#ifdef INFO
+// 全局信息计数初始化
+int INFO_COUNT = 0;
+#endif
+
+#ifdef DEBUG
 // 基础类型输出实现
 void debug_print(int value, std::ofstream& out) { out << value; }
 void debug_print(long value, std::ofstream& out) { out << value; }
@@ -569,5 +575,357 @@ void clear_debug() {
     out.close();
     DEBUG_COUNT = 0;
 }
-
 #endif // DEBUG
+
+#ifdef INFO
+
+// 单参数信息函数实现
+void info(int value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(long value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(long long value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(unsigned int value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(unsigned long value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(unsigned long long value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(float value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(double value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(bool value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(char value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const char* value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::string& value) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(value, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::vector<int>& vec) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(vec, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::vector<std::string>& vec) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(vec, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::vector<double>& vec) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(vec, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::vector<bool>& vec) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(vec, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::vector<char>& vec) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(vec, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::map<int, int>& m) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(m, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::map<std::string, int>& m) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(m, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::map<int, std::string>& m) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(m, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::map<std::string, std::string>& m) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(m, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::set<int>& s) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(s, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::set<std::string>& s) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(s, out);
+    out << std::endl;
+    out.close();
+}
+
+// 多参数信息函数实现
+void info(int v1, int v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::string& v1, int v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(int v1, const std::string& v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::string& v1, const std::string& v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const char* v1, int v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(int v1, const char* v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const char* v1, const char* v2) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(int v1, int v2, int v3) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << ", ";
+    debug_print(v3, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::string& v1, int v2, int v3) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << ", ";
+    debug_print(v3, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(int v1, const std::string& v2, int v3) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << ", ";
+    debug_print(v3, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(int v1, int v2, const std::string& v3) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << ", ";
+    debug_print(v3, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(int v1, int v2, int v3, int v4) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << ", ";
+    debug_print(v3, out);
+    out << ", ";
+    debug_print(v4, out);
+    out << std::endl;
+    out.close();
+}
+
+void info(const std::string& v1, int v2, int v3, int v4) {
+    std::ofstream out(INFO_FILE, std::ios::app);
+    out << "INFO " << INFO_COUNT++ << ": ";
+    debug_print(v1, out);
+    out << ", ";
+    debug_print(v2, out);
+    out << ", ";
+    debug_print(v3, out);
+    out << ", ";
+    debug_print(v4, out);
+    out << std::endl;
+    out.close();
+}
+
+// 清空信息文件
+void clear_info() {
+    std::ofstream out(INFO_FILE, std::ios::trunc);
+    out.close();
+    INFO_COUNT = 0;
+}
+
+#endif // INFO
+
+// 初始化日志文件 - 清空所有日志
+void init_logs() {
+#ifdef DEBUG
+    clear_debug();
+#endif
+#ifdef INFO
+    clear_info();
+#endif
+}

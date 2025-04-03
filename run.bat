@@ -4,7 +4,7 @@ cd build
 
 
 @REM cmake .. -G "MinGW Makefiles"
-cmake .. -G "MinGW Makefiles" -DCMAKE_CXX_FLAGS="-DDEBUG"
+cmake .. -G "MinGW Makefiles" -DCMAKE_CXX_FLAGS="-DDEBUG -DINFO"
 if %ERRORLEVEL% NEQ 0 (
     echo CMake failed with error code %ERRORLEVEL%
     cd ..

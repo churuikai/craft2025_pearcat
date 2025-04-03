@@ -12,9 +12,9 @@ class Req;
 struct Part;
 struct Cell;
 
-extern std::vector<std::vector<std::vector<int>>> FRE;
-extern int T, M, N, V, G, k, TIME;
-inline float G_float;
+// extern std::vector<std::vector<std::vector<int>>> FRE;
+// extern int T, M, N, V, G, k, TIME;
+// inline float G_float;
 extern Disk DISKS[MAX_DISK_NUM];
 extern Object OBJECTS[MAX_OBJECT_NUM];
 extern Req REQS[LEN_REQ];
@@ -181,13 +181,7 @@ private:
 // 读写删频率
 
 
-// 函数声明
-// 频率相关函数声明
-int get_freq(int tag, int timestamp, int op_type); // 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
-int get_min_read_tag(); // 获取当前时间读频率最小的tag
-std::vector<int> get_sorted_read_tag(); // 获取排序后的当前时间读频率的tag
-
-void init_input();
+void init();
 void process_timestamp(int timestamp, Controller &controller);
 void process_delete(Controller &controller);
 void process_write(Controller &controller);

@@ -2,138 +2,12 @@
 #include "disk_obj_req.h"
 #include <limits>
 #include "debug.h"
+#include "data_analysis.h"
 
-// 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
-int get_freq(int tag, int timestamp, int op_type) {
-    // if (tag <= 0 || tag > M || timestamp <= 0 || timestamp > T)
-    //     return 0;
-    int slice_idx = (timestamp - 1) / FRE_PER_SLICING + 1;
-    return FRE[tag][slice_idx][op_type];
-}
 
-// 获取当前TIME读频率最小的tag
-int get_min_read_tag() {
-    int min_tag = 1;
-    int min_freq = get_freq(1, TIME, 2); // 2表示读取频率
-    
-    for (int tag = 2; tag <= M; ++tag) {
-        int freq = get_freq(tag, TIME, 2);
-        if (freq < min_freq) {
-            min_freq = freq;
-            min_tag = tag;
-        }
-    }
-    return min_tag;
-}
-
-// 获取排序后的当前TIME读频率的tag
-std::vector<int> get_sorted_read_tag() {
-    std::vector<int> tag_order = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    std::sort(tag_order.begin(), tag_order.end(), [](int a, int b) {
-        return get_freq(a, TIME, 2) < get_freq(b, TIME, 2);
-    });
-    return tag_order;
-}
-
-void init_input() {
-    // 读取基本参数
-    scanf("%d%d%d%d%d%d", &T, &M, &N, &V, &G, &k);
-
-    G_float = G;
-
-    // 初始化频率数据
-    FRE.resize(MAX_TAG_NUM + 1, std::vector<std::vector<int>>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, std::vector<int>(3, 0)));
-    
-
-    // 读取删除频率数据
-    for (int tag_id = 1; tag_id <= M; ++tag_id) {
-        for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
-            scanf("%d", &FRE[tag_id][i][0]);
-        }
-    }
-    // 读取写入频率数据
-    for (int tag_id = 1; tag_id <= M; ++tag_id) {
-        for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
-            scanf("%d", &FRE[tag_id][i][1]);
-        }
-    }   
-    // 读取读取频率数据
-    for (int tag_id = 1; tag_id <= M; ++tag_id) {
-        for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
-            scanf("%d", &FRE[tag_id][i][2]);
-        }
-    }
-    
-    // 读取次数最大的标签
-    int max_read_tag = 0;
-    int max_read_count = 0;
-    for (int tag_id = 1; tag_id <= M; ++tag_id) {
-        int count = 0;
-        for (int i = 0; i < M + 1; ++i) {
-            count += FRE[tag_id][i][0];
-        }
-        if (count > max_read_count) {
-            max_read_count = count;
-            max_read_tag = tag_id;
-        }
-    }
-    // debug(max_read_tag);
-    std::vector<int> tag_order = {max_read_tag};
-    
-    // 按读频率曲线最相似排列
-    while (tag_order.size() < static_cast<size_t>(M)) {
-        double min_diff_sum = std::numeric_limits<double>::infinity();
-        int min_diff_tag = 0;
-        std::vector<double> fre_tmp_old;
-        
-        for (int i = 0; i < T / FRE_PER_SLICING + 1; ++i) {
-            fre_tmp_old.push_back(FRE[tag_order.back()][i][0]);
-        }
-        
-        double max_val = *std::max_element(fre_tmp_old.begin(), fre_tmp_old.end());
-        if (max_val > 0) {
-            for (double& val : fre_tmp_old) {
-                val /= max_val;
-            }
-        }
-        
-        std::vector<double> fre_tmp_new;
-        
-        for (int tag_id = 1; tag_id <= M; ++tag_id) {
-            if (std::find(tag_order.begin(), tag_order.end(), tag_id) != tag_order.end()) {
-                continue;
-            }
-            
-            std::vector<double> fre_tmp;
-            for (int i = 0; i < T / FRE_PER_SLICING + 1; ++i) {
-                fre_tmp.push_back(FRE[tag_id][i][0]);
-            }
-            
-            double max_val = *std::max_element(fre_tmp.begin(), fre_tmp.end());
-            if (max_val > 0) {
-                for (double& val : fre_tmp) {
-                    val /= max_val;
-                }
-            }
-            
-            // 差异总和
-            double diff_sum = 0;
-            for (size_t i = 0; i < fre_tmp.size(); ++i) {
-                diff_sum += std::abs(fre_tmp[i] - fre_tmp_old[i]);
-            }
-            
-            if (diff_sum < min_diff_sum) {
-                min_diff_sum = diff_sum;
-                min_diff_tag = tag_id;
-                fre_tmp_new = fre_tmp;
-            }
-        }
-        
-        fre_tmp_old = fre_tmp_new;
-        tag_order.push_back(min_diff_tag);
-    }
- 
-    debug(tag_order);
+void init() {
+    info("=============================================================");
+    info("备份区数量: "+ std::to_string(BACK_NUM)+ ", 是否反向: "+ std::to_string(IS_INTERVAL_REVERSE)+ ", 是否按大小分配: "+ std::to_string(IS_PART_BY_SIZE));
 
     // tag_order = {14, 13, 15, 9, 11, 2, 5, 6, 7, 10, 4, 8, 1, 12, 16, 3};
     // tag_order = {14, 3, 13, 16, 15, 12, 9, 1, 11, 8, 2, 4, 5,10, 6, 7};
@@ -143,10 +17,10 @@ void init_input() {
     // tag_order = {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11}; // official 最高
     // tag_order = {13, 6, 14, 15, 1,7, 5,8, 9,2, 10,12, 4,16, 3,11}; // official
     // tag_order = {13, 11, 14, 16, 1, 12, 5, 2, 9, 8, 10, 7, 4, 15, 3, 6};
-    tag_order = {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
+    std::vector<int> tag_order = {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
     // {1, 6, 4, 14, 13, 10, 7, 8, 12, 11, 9, 2, 3, 5, 16, 15},
     // {1, 15, 4, 5, 13, 2, 7, 11, 12, 8, 9, 10, 3, 14, 16, 6},
-    std::vector<std::vector<int>> tag_orders = {
+    TAG_ORDERS = {
         {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
         {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
         {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
@@ -158,24 +32,59 @@ void init_input() {
         {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
         {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
     };
-    // std::vector<std::vector<int>> tag_orders = {
-    //     {9, 2, 10, 15, 4,16, 5,8},
-    //     {9, 2, 10, 15, 4,16, 5,8},
-    //     {9, 2, 10, 15, 4,16, 5,8},
-    //     {9, 2, 10, 15, 4,16, 5,8},
-    //     {9, 2, 10, 15, 4,16, 5,8},
-    //     {13, 6, 14, 12, 1,7, 3,11},
-    //     {13, 6, 14, 12, 1,7, 3,11},
-    //     {13, 6, 14, 12, 1,7, 3,11},
-    //     {13, 6, 14, 12, 1,7, 3,11},
-    //     {13, 6, 14, 12, 1,7, 3,11},
-    // };
+
+    info("实际磁盘标签顺序==============================================");
+    for(int disk_id=0; disk_id<N; ++disk_id)
+    {
+        info(TAG_ORDERS[disk_id]);
+    }
+
+    info("标签占用空间比例==============================================");
+    std::string tag_size_rate_info = "";
+    for(int i=1; i<M+1; ++i) {
+        tag_size_rate_info += "tag"+std::to_string(i)+": "+std::to_string(TAG_SIZE_RATE[i])+"; ";
+    }
+    info(tag_size_rate_info);
+
 
     // 初始化各个磁盘
     for (int i = 1; i <= N; ++i) {
         DISKS[i].id = i;
         DISKS[i].back = BACK_NUM;
-        DISKS[i].init(V, tag_orders[i-1], TAG_SIZE_RATE, TAG_SIZE_DB);
+        DISKS[i].init(V, TAG_ORDERS[i-1], TAG_SIZE_RATE, TAG_SIZE_DB);
+    }
+
+    // 输出每个磁盘的分区表信息
+    info("磁盘分区表信息==============================================");
+    for (int i = 1; i <= N; ++i) {
+        std::string disk_info = "disk " + std::to_string(i) + ": ";
+        // 输出备份区
+        for (auto& part : DISKS[i].get_parts(0, 0)) {
+            disk_info += "back-part (" + std::to_string(part.start) + "-" + std::to_string(part.end) + 
+                         ", " + std::to_string(part.free_cells) + "); ";
+        }
+        // 输出数据区
+        for (int tag_idx = 0; tag_idx < TAG_ORDERS[i-1].size(); ++tag_idx) {
+            int tag_id = TAG_ORDERS[i-1][tag_idx];
+            if (IS_PART_BY_SIZE) {
+                // 如果按大小分区，输出所有size的分区
+                for (int size = 1; size <= 5; ++size) {
+                    for (auto& part : DISKS[i].get_parts(tag_id, size)) {
+                        disk_info += "tag-" + std::to_string(tag_id) + " size-" + std::to_string(size) + "(" + 
+                                     std::to_string(part.start) + "-" + std::to_string(part.end) + 
+                                     ", " + std::to_string(part.free_cells) + "); ";
+                    }
+                }
+            } else {
+                // 如果不按大小分区，只输出size为1的分区
+                for (auto& part : DISKS[i].get_parts(tag_id, 1)) {
+                    disk_info += "tag-" + std::to_string(tag_id) + "(" + 
+                                 std::to_string(part.start) + "-" + std::to_string(part.end) + 
+                                 ", " + std::to_string(part.free_cells) + "); ";
+                }
+            }
+        }
+        info(disk_info);
     }
 } 
 
@@ -319,21 +228,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             tag_reverse[tag_order[i]] = tag_order[i-1];
         }
     }
-    
-    // debug格式化输出
-    // if (DEBUG) {
-    //     std::string output = "disk: " + std::to_string(id) + " part_tables: [";
-    //     for (size_t i = 0; i < part_tables.size(); ++i) {
-    //         if (i > 0) output += ", ";
-    //     int tag_id = (i - 1) / 5;
-    //     int part_type = (i - 1) % 5 + 1;
-    //     output += "(" + std::to_string(i) + ", " + std::to_string(tag_id) + "." + std::to_string(part_type) + ", [";
-    //     output += std::to_string(part_tables[i][0]) + ", " + std::to_string(part_tables[i][1]) + ", " + std::to_string(part_tables[i][2]);
-    //         output += "])";
-    //     }
-    //     output += "]";
-    //     debug(output);
-    // }
+
 }
 
 // 添加Disk析构函数实现

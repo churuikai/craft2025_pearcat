@@ -9,7 +9,8 @@ void process_write(Controller &controller)
 {
     int n_write;
     scanf("%d", &n_write);
-    if (n_write == 0) return;
+    if (n_write == 0)
+        return;
     // 处理每个写入请求
     for (int i = 0; i < n_write; ++i)
     {
@@ -20,7 +21,8 @@ void process_write(Controller &controller)
         for (const auto &[disk_id, cell_idxs] : obj->replicas)
         {
             printf("%d ", disk_id);
-            for (size_t j = 0; j < cell_idxs.size(); ++j) printf(" %d", cell_idxs[j]);
+            for (size_t j = 0; j < cell_idxs.size(); ++j)
+                printf(" %d", cell_idxs[j]);
             printf("\n");
         }
     }
@@ -28,47 +30,67 @@ void process_write(Controller &controller)
 }
 
 // 获取磁盘和对应分区
-std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
+std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
 {
 
-    std::vector<std::pair<int, Part*>> space; // <disk_id, part_idx>
+    std::vector<std::pair<int, Part *>> space; // <disk_id, part_idx>
     // 每过cycle个周期换一次磁盘
     int cycle = 1;
     int tmp_time = TIME / cycle + cycle;
 
     // 优先选择对应tag对应size分区有空闲空间的磁盘
-    std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; tag_list[tag + 1] = 0;
-    std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5}; size_list[obj_size] = 0;
-    std::vector<int> op_list = {0, 1};
+    // std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; 
+    std::vector<int> tag_list = {tag, -1, 1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
+    // std::vector<int> tag_list = {tag, -1,15,5,2,11,8,10,14,6,16,3,9,12,7,13,4,1};
+    for (int i = 2; i < tag_list.size(); ++i)
+    {
+        if (tag_list[i] == tag)
+        {
+            tag_list[i] = 0;
+        }
+    }
+    std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5};
+    size_list[obj_size] = 0;
 
+    std::vector<int> op_list = {0, 1};
     std::random_device rd;
-    std::mt19937 gen(rd()); 
+    std::mt19937 gen(TIME);
     std::shuffle(op_list.begin(), op_list.end(), gen);
+    // std::shuffle(tag_list.begin() + 2, tag_list.end(), gen);
     for (int tag_ : tag_list)
     {
-        if (space.size() == 3 - BACK_NUM) break;
-        if ((!IS_INTERVAL_REVERSE and tag_ == -1) or tag_ == 0) continue;
+        if (space.size() == 3 - BACK_NUM)
+            break;
+        if ((!IS_INTERVAL_REVERSE and tag_ == -1) or tag_ == 0)
+            continue;
         for (int size_ : size_list)
         {
-            if (space.size() == 3 - BACK_NUM) break;
-            if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0) continue;
+            if (space.size() == 3 - BACK_NUM)
+                break;
+            if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0)
+                continue;
             for (int i = 1 + tmp_time; i <= N + tmp_time; ++i)
             {
                 int disk_id = (i - 1) % N + 1;
                 // 检查磁盘是否已经在space中
-                if (space.size() == 3 - BACK_NUM) break;
-                if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p){ return p.first == disk_id; }))continue;
+                if (space.size() == 3 - BACK_NUM)
+                    break;
+                if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p)
+                                { return p.first == disk_id; }))
+                    continue;
                 tag_ = tag_ == -1 ? DISKS[disk_id].tag_reverse[tag] : tag_;
-                // for(auto& part : DISKS[disk_id].get_parts(tag_, size_)) 
-                for(int part_idx : op_list) 
+                // for(auto& part : DISKS[disk_id].get_parts(tag_, size_))
+                for (int part_idx : op_list)
                 {
-                    auto& parts = DISKS[disk_id].get_parts(tag_, size_);
-                    if(parts.size() == 0) continue;
-                    Part& part = parts[part_idx];
+                    auto &parts = DISKS[disk_id].get_parts(tag_, size_);
+                    if (parts.size() == 0)
+                        continue;
+                    Part &part = parts[part_idx];
                     if (part.free_cells >= obj_size)
                     {
                         space.push_back({disk_id, &part});
-                        if (space.size() == 3 - BACK_NUM) break;
+                        if (space.size() == 3 - BACK_NUM)
+                            break;
                     }
                 }
             }
@@ -80,9 +102,12 @@ std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
     // 寻找备份区
     for (int i = 1 + tmp_time; i <= N + tmp_time; ++i)
     {
-        if (space.size() == 3) break;
+        if (space.size() == 3)
+            break;
         int disk_id = (i - 1) % N + 1;
-        if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p) { return p.first == disk_id; })) continue;
+        if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p)
+                        { return p.first == disk_id; }))
+            continue;
         if (DISKS[disk_id].get_parts(0, 0)[0].free_cells >= obj_size)
         {
             space.push_back({disk_id, &DISKS[disk_id].get_parts(0, 0)[0]});
@@ -119,7 +144,7 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
 
     for (size_t i = 0; i < space.size(); ++i)
     {
-        auto& [disk_id, part] = space[i];
+        auto &[disk_id, part] = space[i];
         auto pos = DISKS[disk_id].write(obj_id, units, tag, part);
         obj.replicas[i].first = disk_id;
         obj.replicas[i].second.insert(obj.replicas[i].second.end(), pos.begin(), pos.end());
@@ -128,7 +153,7 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
     return &obj;
 }
 
-std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag, Part* part)
+std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag, Part *part)
 {
     if (IS_INTERVAL_REVERSE)
     {
