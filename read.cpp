@@ -36,17 +36,39 @@ void process_read(Controller &controller)
 // 添加请求
 void Controller::add_req(int req_id, int obj_id)
 {
-    // 更新请求
-    REQS[req_id % LEN_REQ].update(req_id, obj_id, timestamp);
-    // 更新对象
-    OBJECTS[obj_id].req_ids.insert(req_id);
-    // 更新activate_reqs
-    activate_reqs.insert(req_id);
+    bool is_over_load = false;
+    int tag = OBJECTS[obj_id].tag;
+    int min_read_tag = get_min_read_tag();
+    // debug(TIME, tag, min_read_tag);
     // 更新磁盘
     for (int i = 0; i < 3 - BACK_NUM; ++i)
     {
         auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
-        DISKS[disk_id].add_req(req_id, cells_idx);
+        if (1.0 * G / DISKS[disk_id].req_pos.size() / V < LOAD_COEFFICIENT and tag == min_read_tag)
+        {
+            is_over_load = true;
+            over_load_reqs.push_back(req_id);
+        }
+    }
+    if (not is_over_load)
+    {
+        for (int i = 0; i < 3 - BACK_NUM; ++i)
+        {
+            auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
+            DISKS[disk_id].add_req(req_id, cells_idx);
+        }
+        // 更新请求
+        REQS[req_id % LEN_REQ].update(req_id, obj_id, timestamp);
+        // 更新对象
+        OBJECTS[obj_id].req_ids.insert(req_id);
+        // 更新activate_reqs
+        activate_reqs.insert(req_id);
+        // 更新磁盘
+        for (int i = 0; i < 3 - BACK_NUM; ++i)
+        {
+            auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
+            DISKS[disk_id].add_req(req_id, cells_idx);
+        }
     }
 }
 void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
@@ -64,19 +86,21 @@ std::pair<std::vector<std::string>, std::vector<int>> Controller::read()
 {
     std::vector<std::string> ops;
     std::vector<int> completed_reqs;
-
+    if(TIME>18000) debug(111);
     for (int disk_id = 1; disk_id <= N; ++disk_id)
     {
         // 磁头1
         auto [op1, completed_req1] = DISKS[disk_id].read(1);
         ops.push_back(op1);
         completed_reqs.insert(completed_reqs.end(), completed_req1.begin(), completed_req1.end());
-
+        if(TIME>18000) debug(222);
         // 磁头2
         auto [op2, completed_req2] = DISKS[disk_id].read(2);
         ops.push_back(op2);
         completed_reqs.insert(completed_reqs.end(), completed_req2.begin(), completed_req2.end());
+        if(TIME>18000) debug(333);
     }
+    if(TIME>18000) debug(444);
     // 更新activate_reqs
     for (int req_id : completed_reqs) {
         activate_reqs.erase(req_id);
@@ -202,7 +226,6 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         {
             path.append(1, 'r');
             auto completed_reqs_cell = cells[point]->read();
-            // req_cells_num -= completed_reqs_cell.size();
             completed_reqs.insert(completed_reqs.end(), completed_reqs_cell.begin(), completed_reqs_cell.end());
         }
         else

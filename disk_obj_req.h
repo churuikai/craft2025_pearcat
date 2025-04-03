@@ -150,6 +150,7 @@ class Controller
 public:
     int timestamp;
     std::unordered_set<int> activate_reqs;
+    std::vector<int> over_load_reqs;
 
     Controller() {}
 

@@ -38,18 +38,27 @@ void process_busy(Controller &controller)
             controller.activate_reqs.erase(req_id);
         }
     }
+    int n_over_load = controller.over_load_reqs.size();
     int n_busy = busy_req_ids.size();
-    printf("%d\n", n_busy);
+    printf("%d\n", n_busy+n_over_load);
     for (int i = 0; i < n_busy; i++) {
         printf("%d\n", busy_req_ids[i]);
     }
+    for (int i = 0; i < n_over_load; i++) {
+        printf("%d\n", controller.over_load_reqs[i]);
+    }
     fflush(stdout);
+    controller.over_load_reqs.clear();
     if(n_busy > 0)
     {
         debug("some busy==================================================================================");
         debug(TIME, busy_req_ids.size());
         debug(controller.activate_reqs.size());
         debug(1.0*G/controller.activate_reqs.size()/N/V);
+    }
+    if(n_over_load > 0){
+        debug("some over load==================================================================================");
+        debug(TIME, n_over_load);
     }
     // 更新负载系数
     for (int i = 0; i < N; i++) {
