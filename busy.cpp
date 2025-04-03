@@ -6,12 +6,11 @@ void process_busy(Controller &controller)
 {
     // 清理长周期的请求
     std::vector<int> busy_req_ids;
-
-    if (TIME % 5 == 0)
+    if (TIME % 10 == 0)
     {
         for (int req_id : controller.activate_reqs)
         {
-            if (REQS[req_id % LEN_REQ].timestamp + 100 < TIME)
+            if (REQS[req_id % LEN_REQ].timestamp + 95 < TIME)
             {
                 busy_req_ids.push_back(req_id);
                 // 释放磁盘
@@ -49,17 +48,19 @@ void process_busy(Controller &controller)
     }
     fflush(stdout);
     controller.over_load_reqs.clear();
-    if(n_busy > 0)
-    {
-        debug("some busy==================================================================================");
-        debug(TIME, busy_req_ids.size());
-        debug(controller.activate_reqs.size());
-        debug(1.0*G/controller.activate_reqs.size()/N/V);
-    }
-    if(n_over_load > 0){
-        debug("some over load==================================================================================");
-        debug(TIME, n_over_load);
-    }
+    // if(n_busy > 0)
+    // {
+    //     debug("some busy==================================================================================");
+    //     debug(TIME, busy_req_ids.size());
+    //     debug(controller.activate_reqs.size());
+    //     debug(1.0*G/controller.activate_reqs.size()*N/V);
+    // }
+    // if(n_over_load > 0){
+    //     debug("some over load==================================================================================");
+    //     debug(TIME, n_over_load);
+    // }
+    controller.busy_count += n_busy;
+    controller.over_load_count += n_over_load;
     // 更新负载系数
     for (int i = 0; i < N; i++) {
         DISKS[i].load_coefficient = 1.0*G/DISKS[i].req_pos.size()/V;

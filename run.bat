@@ -20,4 +20,4 @@ if %ERRORLEVEL% NEQ 0 (
 
 cd ..
 echo Build successful!
-python run/run.py run/interactor.exe run/sample_practice.in code_craft.exe -d 18000
+python run/run.py run/interactor.exe run/sample_practice.in code_craft.exe

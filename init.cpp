@@ -26,6 +26,15 @@ int get_min_read_tag() {
     return min_tag;
 }
 
+// 获取排序后的当前TIME读频率的tag
+std::vector<int> get_sorted_read_tag() {
+    std::vector<int> tag_order = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+    std::sort(tag_order.begin(), tag_order.end(), [](int a, int b) {
+        return get_freq(a, TIME, 2) < get_freq(b, TIME, 2);
+    });
+    return tag_order;
+}
+
 void init_input() {
     // 读取基本参数
     scanf("%d%d%d%d%d%d", &T, &M, &N, &V, &G, &k);

@@ -36,27 +36,36 @@ void process_read(Controller &controller)
 // 添加请求
 void Controller::add_req(int req_id, int obj_id)
 {
+    // 判断是否超载
     bool is_over_load = false;
     int tag = OBJECTS[obj_id].tag;
-    int min_read_tag = get_min_read_tag();
-    // debug(TIME, tag, min_read_tag);
+    // 获取标签读频率顺序（由小到大排序）
+    auto order_tag = get_sorted_read_tag();
     // 更新磁盘
     for (int i = 0; i < 3 - BACK_NUM; ++i)
     {
         auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
-        if (1.0 * G / DISKS[disk_id].req_pos.size() / V < LOAD_COEFFICIENT and tag == min_read_tag)
+        // 计算当前负载能力 比 最低负载能力 的倍数
+        float n = (1.0 * G / DISKS[disk_id].req_pos.size() / V)/(LOAD_COEFFICIENT*0.8);
+        // 超过8倍 不考虑舍弃
+        if (n > 8) break;
+        // 计算需要舍弃的请求数量
+        int m = M - 7 - (int)n;
+        if(m<0) m = 0;
+        // 从低频到高频依次判断是否舍弃
+        for (int j = 0; j < m; ++j)
         {
-            is_over_load = true;
-            over_load_reqs.push_back(req_id);
+            if (tag == order_tag[j])
+            {
+                is_over_load = true;
+                over_load_reqs.push_back(req_id);
+                break;
+            }
         }
+
     }
     if (not is_over_load)
     {
-        for (int i = 0; i < 3 - BACK_NUM; ++i)
-        {
-            auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
-            DISKS[disk_id].add_req(req_id, cells_idx);
-        }
         // 更新请求
         REQS[req_id % LEN_REQ].update(req_id, obj_id, timestamp);
         // 更新对象
@@ -73,6 +82,7 @@ void Controller::add_req(int req_id, int obj_id)
 }
 void Disk::add_req(int req_id, const std::vector<int> &cells_idx)
 {
+    req_pos[req_id] = Int16Array();
     for (int cell_idx : cells_idx)
     {
         cells[cell_idx]->req_ids.insert(req_id);
@@ -86,21 +96,21 @@ std::pair<std::vector<std::string>, std::vector<int>> Controller::read()
 {
     std::vector<std::string> ops;
     std::vector<int> completed_reqs;
-    if(TIME>18000) debug(111);
+    // if(TIME>18000) debug(111);
     for (int disk_id = 1; disk_id <= N; ++disk_id)
     {
         // 磁头1
         auto [op1, completed_req1] = DISKS[disk_id].read(1);
         ops.push_back(op1);
         completed_reqs.insert(completed_reqs.end(), completed_req1.begin(), completed_req1.end());
-        if(TIME>18000) debug(222);
+        // if(TIME>18000) debug(222);
         // 磁头2
         auto [op2, completed_req2] = DISKS[disk_id].read(2);
         ops.push_back(op2);
         completed_reqs.insert(completed_reqs.end(), completed_req2.begin(), completed_req2.end());
-        if(TIME>18000) debug(333);
+        // if(TIME>18000) debug(333);
     }
-    if(TIME>18000) debug(444);
+    // if(TIME>18000) debug(444);
     // 更新activate_reqs
     for (int req_id : completed_reqs) {
         activate_reqs.erase(req_id);

@@ -32,7 +32,7 @@ inline const int MAX_G = 1000;
 
 
 // 负载系数
-inline const float LOAD_COEFFICIENT = 8.36287e-07;
+inline const float LOAD_COEFFICIENT = 1.599818022273934e-05;
 
 // 复杂常量也可以用inline
 // inline const std::vector<double> TAG_SIZE_RATE = {0, 

@@ -152,6 +152,10 @@ public:
     std::unordered_set<int> activate_reqs;
     std::vector<int> over_load_reqs;
 
+
+    int busy_count = 0;
+    int over_load_count = 0;
+
     Controller() {}
 
     // 删除
@@ -181,6 +185,7 @@ private:
 // 频率相关函数声明
 int get_freq(int tag, int timestamp, int op_type); // 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
 int get_min_read_tag(); // 获取当前时间读频率最小的tag
+std::vector<int> get_sorted_read_tag(); // 获取排序后的当前时间读频率的tag
 
 void init_input();
 void process_timestamp(int timestamp, Controller &controller);

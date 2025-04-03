@@ -41,8 +41,8 @@ std::vector<std::pair<int, Part*>> Controller::_get_disk(int obj_size, int tag)
     std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5}; size_list[obj_size] = 0;
     std::vector<int> op_list = {0, 1};
 
-    // std::mt19937 gen(42); 
-    // std::shuffle(op_list.begin(), op_list.end(), gen);
+    std::mt19937 gen(42); 
+    std::shuffle(op_list.begin(), op_list.end(), gen);
     for (int tag_ : tag_list)
     {
         if (space.size() == 3 - BACK_NUM) break;
