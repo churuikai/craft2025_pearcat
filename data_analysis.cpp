@@ -5,7 +5,7 @@
 #include <algorithm>
 // 定义细粒度的频率数据结构
 std::vector<std::vector<std::vector<int>>> FRE;
-const int FINE_GRANULARITY = 100;                    // 细粒度为100时间片
+const int FINE_GRANULARITY = 1800;                    // 细粒度为100时间片，实验表明细粒度效果更差。。。
 std::vector<std::vector<std::vector<int>>> FRE_FINE; // [tag][fine_slice_idx][op_type]
 std::vector<std::vector<int>> SORTED_READ_TAGS;      // [timestamp][tag_index]，预计算的排序标签
 
@@ -13,6 +13,7 @@ std::vector<std::vector<int>> SORTED_READ_TAGS;      // [timestamp][tag_index]�
 // 细粒度的频率获取函数 （op_type: 0删除，1写入，2读取）
 int get_freq_fine(int tag, int timestamp, int op_type)
 {
+
     int fine_slice_idx = (timestamp - 1) / FINE_GRANULARITY + 1;
     return FRE_FINE[tag][fine_slice_idx][op_type];
 }
@@ -53,38 +54,51 @@ void process_data_analysis()
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
             scanf("%d", &FRE[tag_id][i][2]);
     }
-    // 使用三次样条插值得到细粒度频率数据
+    // 插值得到细粒度频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int op_type = 0; op_type < 3; ++op_type)
         {
             int coarse_slices = (T - 1) / FRE_PER_SLICING + 1;
 
-            // 提取原始数据点
-            std::vector<int> original_data(coarse_slices + 1);
-            for (int i = 1; i <= coarse_slices; ++i)
-            {
-                original_data[i] = FRE[tag_id][i][op_type];
-            }
-
-            // 计算样条插值系数
-            std::vector<double> a(coarse_slices), b(coarse_slices), c(coarse_slices + 1), d(coarse_slices);
-            __compute_spline_coefficients(original_data, a, b, c, d, coarse_slices);
-
             // 对每个细粒度时间点进行插值
             for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx)
             {
                 // 当前细粒度时间点对应的实际时间戳
                 int timestamp = (fine_idx - 1) * FINE_GRANULARITY + 1;
-
+                
+                // 如果细粒度的时间粒度正好是粗粒度的整数倍，可以直接取粗粒度的值
+                if (FINE_GRANULARITY % FRE_PER_SLICING == 0 && 
+                    (timestamp - 1) % FRE_PER_SLICING == 0) {
+                    int coarse_idx = (timestamp - 1) / FRE_PER_SLICING + 1;
+                    if (coarse_idx <= (T - 1) / FRE_PER_SLICING + 1) {
+                        FRE_FINE[tag_id][fine_idx][op_type] = FRE[tag_id][coarse_idx][op_type];
+                        continue;
+                    }
+                }
                 // 计算在粗粒度上的位置（浮点数）
                 double coarse_pos = (timestamp - 1) / (double)FRE_PER_SLICING + 1;
-
-                // 找到对应的粗粒度区间
-                int i = std::min(coarse_slices - 1, std::max(1, (int)coarse_pos));
-
-                // 使用样条插值
-                FRE_FINE[tag_id][fine_idx][op_type] = __spline_interpolate(a, b, c, d, coarse_pos, i);
+                
+                // 找到对应的粗粒度区间的左右两个点
+                int left_idx = std::max(1, (int)floor(coarse_pos));
+                int right_idx = std::min((T - 1) / FRE_PER_SLICING + 1, left_idx + 1);
+                
+                // 检查边界情况
+                if (left_idx == right_idx) {
+                    // 在边界处，直接使用对应的粗粒度值
+                    FRE_FINE[tag_id][fine_idx][op_type] = FRE[tag_id][left_idx][op_type];
+                } else {
+                    // 计算在两点之间的位置比例
+                    double ratio = coarse_pos - left_idx;
+                    
+                    // 使用线性插值
+                    double left_val = FRE[tag_id][left_idx][op_type];
+                    double right_val = FRE[tag_id][right_idx][op_type];
+                    int interpolated_value = static_cast<int>(round(left_val * (1 - ratio) + right_val * ratio));
+                    
+                    // 确保值非负
+                    FRE_FINE[tag_id][fine_idx][op_type] = std::max(0, interpolated_value);
+                }
             }
         }
     }
@@ -118,8 +132,8 @@ void compute_tag_order()
     int max_read_count = 0;
     for (int tag_id = 1; tag_id <= M; ++tag_id) {
         int count = 0;
-        for (int i = 0; i < M + 1; ++i) {
-            count += FRE[tag_id][i][0];
+        for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
+            count += FRE[tag_id][i][2];
         }
         if (count > max_read_count) {
             max_read_count = count;
@@ -136,8 +150,8 @@ void compute_tag_order()
         
         // 获取最后一个标签的频率曲线
         std::vector<double> fre_tmp_old;
-        for (int i = 0; i < T / FRE_PER_SLICING + 1; ++i) {
-            fre_tmp_old.push_back(FRE[tag_order.back()][i][0]);
+        for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
+            fre_tmp_old.push_back(FRE[tag_order.back()][i][2]);
         }
         
         // 找出与当前标签曲线最相似的未加入标签
@@ -148,8 +162,8 @@ void compute_tag_order()
             
             // 获取待比较标签的频率曲线
             std::vector<double> fre_tmp_new;
-            for (int i = 0; i < T / FRE_PER_SLICING + 1; ++i) {
-                fre_tmp_new.push_back(FRE[tag_id][i][0]);
+            for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
+                fre_tmp_new.push_back(FRE[tag_id][i][2]);
             }
             
             // 使用新参数计算相似度，两条曲线都需要归一化
@@ -194,65 +208,27 @@ double __compute_similarity(const std::vector<double> &curve1, const std::vector
     std::vector<double> normalized_curve1 = normalize_curve1 ? __normalize_curve(curve1) : curve1;
     std::vector<double> normalized_curve2 = normalize_curve2 ? __normalize_curve(curve2) : curve2;
     
-    // 计算差异总和
-    double diff_sum = 0;
+    // 使用更好的相似度计算方法 - 余弦相似度
+    double dot_product = 0.0;
+    double norm1 = 0.0;
+    double norm2 = 0.0;
+    
     for (size_t i = 0; i < normalized_curve1.size() && i < normalized_curve2.size(); ++i) {
-        diff_sum += std::abs(normalized_curve1[i] - normalized_curve2[i]);
+        dot_product += normalized_curve1[i] * normalized_curve2[i];
+        norm1 += normalized_curve1[i] * normalized_curve1[i];
+        norm2 += normalized_curve2[i] * normalized_curve2[i];
     }
     
-    return diff_sum;
+    // 避免除以零
+    if (norm1 == 0.0 || norm2 == 0.0) {
+        return 1.0; // 如果有一条曲线全为零，则认为它们不相似
+    }
+    
+    // 余弦相似度，值域为[-1,1]，值越大表示越相似
+    double cosine_similarity = dot_product / (std::sqrt(norm1) * std::sqrt(norm2));
+    
+    // 转换为距离度量，值域为[0,2]，值越小表示越相似
+    return 1.0 - cosine_similarity;
 }
 
-// 三次样条插值辅助函数
-void __compute_spline_coefficients(const std::vector<int> &y, std::vector<double> &a, std::vector<double> &b,
-                                 std::vector<double> &c, std::vector<double> &d, int n)
-{
-    std::vector<double> h(n), alpha(n), l(n + 1), mu(n), z(n + 1);
-
-    for (int i = 0; i < n; i++)
-    {
-        h[i] = 1.0; // 等距采样点，间距为1
-        a[i] = y[i];
-    }
-
-    // 计算中间变量
-    for (int i = 1; i < n; i++)
-    {
-        alpha[i] = 3.0 * (a[i + 1] - a[i]) / h[i] - 3.0 * (a[i] - a[i - 1]) / h[i - 1];
-    }
-
-    // 解三对角矩阵
-    l[0] = 1.0;
-    mu[0] = 0.0;
-    z[0] = 0.0;
-
-    for (int i = 1; i < n; i++)
-    {
-        l[i] = 2.0 * (h[i - 1] + h[i]) - h[i - 1] * mu[i - 1];
-        mu[i] = h[i] / l[i];
-        z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
-    }
-
-    l[n] = 1.0;
-    z[n] = 0.0;
-    c[n] = 0.0;
-
-    // 回代求解系数
-    for (int j = n - 1; j >= 0; j--)
-    {
-        c[j] = z[j] - mu[j] * c[j + 1];
-        b[j] = (a[j + 1] - a[j]) / h[j] - h[j] * (c[j + 1] + 2.0 * c[j]) / 3.0;
-        d[j] = (c[j + 1] - c[j]) / (3.0 * h[j]);
-    }
-}
-
-// 使用三次样条插值计算值
-int __spline_interpolate(const std::vector<double> &a, const std::vector<double> &b,
-                       const std::vector<double> &c, const std::vector<double> &d,
-                       double x, int i)
-{
-    double dx = x - i;
-    double result = a[i] + b[i] * dx + c[i] * dx * dx + d[i] * dx * dx * dx;
-    return std::max(0, static_cast<int>(std::round(result)));
-}
 

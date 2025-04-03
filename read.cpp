@@ -48,7 +48,7 @@ void Controller::add_req(int req_id, int obj_id)
     {
         auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
         // 计算当前负载能力 比 最低负载能力 的倍数
-        float n = (1.0 * G / DISKS[disk_id].req_pos.size() / V)/(LOAD_COEFFICIENT*0.8);
+        float n = (1.0 * G / DISKS[disk_id].req_pos.size() / V)/LOAD_COEFFICIENT;
         // 超过8倍 不考虑舍弃
         // if (n > 8) break;
         // 计算需要舍弃的请求数量

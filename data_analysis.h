@@ -15,5 +15,3 @@ void compute_tag_order();
 // 辅助函数
 std::vector<double> __normalize_curve(const std::vector<double> &curve);
 double __compute_similarity(const std::vector<double> &curve1, const std::vector<double> &curve2, bool normalize_curve1 = true, bool normalize_curve2 = true);
-void __compute_spline_coefficients(const std::vector<int> &y, std::vector<double> &a, std::vector<double> &b, std::vector<double> &c, std::vector<double> &d, int n);
-int __spline_interpolate(const std::vector<double> &a, const std::vector<double> &b, const std::vector<double> &c, const std::vector<double> &d, double x, int i);

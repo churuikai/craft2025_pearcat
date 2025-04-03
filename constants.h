@@ -9,7 +9,7 @@ inline float G_float;
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
 inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
-inline const float DATA_COMPRESSION = 0.85; // 数据压缩系数 0-1
+inline const float DATA_COMPRESSION = 0.87; // 数据压缩系数 0-1
 
 //是否间隔反向
 inline const int IS_INTERVAL_REVERSE = 1; // 0-1
@@ -36,7 +36,7 @@ inline const int MAX_G = 1000;
 
 
 // 负载系数
-inline const float LOAD_COEFFICIENT = 1.599818022273934e-05;
+inline const float LOAD_COEFFICIENT = 0.76*1.599818022273934e-05;
 
 // 复杂常量也可以用inline
 // inline const std::vector<double> TAG_SIZE_RATE = {0, 

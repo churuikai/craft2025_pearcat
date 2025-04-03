@@ -40,8 +40,17 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
 
     // 优先选择对应tag对应size分区有空闲空间的磁盘
     // std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; 
-    std::vector<int> tag_list = {tag, -1, 1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
+    // std::vector<int> tag_list = {tag, -1, 1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
+    std::vector<int> tag_list = {tag, -1, 1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5};
     // std::vector<int> tag_list = {tag, -1,15,5,2,11,8,10,14,6,16,3,9,12,7,13,4,1};
+
+    // 将索引2到tag_list[idx]=tag之间的内容移动到最后面
+    auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
+    if (it != tag_list.end()) {
+        int idx = std::distance(tag_list.begin(), it);
+        // 使用rotate算法将[begin+2, it+1)区间移到末尾
+        std::rotate(tag_list.begin() + 2, it + 1, tag_list.end());
+    }
     for (int i = 2; i < tag_list.size(); ++i)
     {
         if (tag_list[i] == tag)
