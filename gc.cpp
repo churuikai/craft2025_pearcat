@@ -2,7 +2,6 @@
 
 void process_gc(Controller &controller)
 {
-    // 空读取 “GARBAGE COLLECTION”
     scanf("%*s%*s");
     printf("GARBAGE COLLECTION\n");
     for(int i = 0; i < N; i++) {

@@ -21,16 +21,16 @@ void init() {
     // {1, 6, 4, 14, 13, 10, 7, 8, 12, 11, 9, 2, 3, 5, 16, 15},
     // {1, 15, 4, 5, 13, 2, 7, 11, 12, 8, 9, 10, 3, 14, 16, 6},
     TAG_ORDERS = {
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
-        // {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
         {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
         {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
         {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
@@ -127,13 +127,14 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     // 磁盘分区
     // tag 0 : 备份区，占比 90%*back/3*size
     // tag 1.1 1.2 1.3 1.4 1.5 ~M.1 M.2 M.3 M.4 M.5 : 数据区，占比 size-90%*back/3*size
+    // 冗余区 tag 17.1 17.2 17.3 17.4 17.5 : 数据区空间不够时动态扩充的部分
     int back_size = this->back == 0 ? 0 : static_cast<int>(0.305 * this->back * size) + 1;
     int data_size = size - back_size;
     //调整
     data_size = static_cast<int>(data_size * data_rate);
     back_size = this->back == 0 ? 0 : size - data_size;
     
-    part_tables.resize((M + 1) * 5 + 1);
+    part_tables.resize((M + 2) * 5 + 1);
 
     // 备份区初始化 {start, end, size, pointer}
     get_parts(0, 0).push_back(Part(data_size + 1, size, back_size, data_size+1, 0, 0));
@@ -165,10 +166,15 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
         pointer_temp = tag_id_end + 1;
     }
 
+    // 冗余区
+    auto& dynamic_tables1 = get_parts(17, 1);
+    dynamic_tables1.push_back(Part(pointer_temp, data_size1, data_size1 - pointer_temp + 1, pointer_temp, 17, 1));
+    pointer_temp = dynamic_tables1.back().end + 1;
+
     // 调整边界
-    auto& this_tables1 = get_parts(tag_order.back(), 1);
-    this_tables1.back().end = data_size1;
-    this_tables1.back().free_cells = data_size1 - this_tables1.back().start + 1;
+    // auto& this_tables1 = get_parts(tag_order.back(), 1);
+    // this_tables1.back().end = data_size1;
+    // this_tables1.back().free_cells = data_size1 - this_tables1.back().start + 1;
 
     // 数据2区初始化
     data_size2 = data_size - data_size1;
@@ -195,10 +201,15 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
         pointer_temp = tag_id_end + 1;
     }
 
+    // 冗余区
+    auto& dynamic_tables2 = get_parts(17, 1);
+    dynamic_tables2.push_back(Part(pointer_temp, data_size, data_size - pointer_temp + 1, pointer_temp, 17, 1));
+    pointer_temp = dynamic_tables2.back().end + 1;
+
     // 调整边界
-    auto& this_tables2 = get_parts(tag_order.back(), 1);
-    this_tables2.back().end = data_size;
-    this_tables2.back().free_cells = data_size - this_tables2.back().start + 1;
+    // auto& this_tables2 = get_parts(tag_order.back(), 1);
+    // this_tables2.back().end = data_size;
+    // this_tables2.back().free_cells = data_size - this_tables2.back().start + 1;
 
     // 备份区初始化单元
     for (auto& part : get_parts(0,0)) {
@@ -216,30 +227,41 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             }
         }
     }
+    // 冗余区初始化单元
+    for (auto& part : get_parts(17, 1)) {
+        for (int cell_id = part.start; cell_id <= part.end; ++cell_id) {
+            cells[cell_id]->part = &part;
+        }
+    }
 
     // 标签间接反向
     if(IS_INTERVAL_REVERSE) {
         // part_tables[0].start, part_tables[0].end = part_tables[0].end, part_tables[0].start;
         // 备份区反向
         auto& back_tables = get_parts(0, 0);
-        back_tables[0].start, back_tables[0].end = back_tables[0].end, back_tables[0].start;
+        std::swap(back_tables[0].start, back_tables[0].end);   
 
         // 数据区间歇反向
-        for(int i = 1; i<=tag_order.size(); i+=2) {
+        for(int i = 1; i<=tag_order.size()-1; i+=2) {
             for(int j=1; j<=5; ++j) {
                 for(auto& part : get_parts(tag_order[i], j)) {
-                    part.start, part.end = part.end, part.start;
+                    // part.start, part.end = part.end, part.start;
+                    std::swap(part.start, part.end);
                 }
             }
         }
         // 记录标签反向的对象
-        for(int i = 1; i <= tag_order.size(); i+=2) {
+        for(int i = 1; i <= tag_order.size()-1; i+=2) {
             assert(tag_order[i-1] != 0);
             tag_reverse[tag_order[i-1]] = tag_order[i];
             tag_reverse[tag_order[i]] = tag_order[i-1];
         }
-    }
 
+        // 冗余区反向
+        for(auto& part : get_parts(17, 1)) {
+            std::swap(part.start, part.end);
+        }
+    }
 }
 
 // 添加Disk析构函数实现

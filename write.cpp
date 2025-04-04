@@ -35,22 +35,46 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
 
     std::vector<std::pair<int, Part *>> space; // <disk_id, part_idx>
     // 每过cycle个周期换一次磁盘
-    int cycle = 1;
-    int tmp_time = TIME / cycle + cycle;
+    // int cycle = 1;
+    // int disk_start = TIME / cycle + cycle;
+    // 每写入cycle_disk次，换一个磁盘，每写入cycle_op次，换一个数据区；cycle_disk必须为cycle_op的整数倍
+    int cycle_disk = 4;
+    int cycle_op = 1;
+    assert(cycle_disk % cycle_op == 0 && "cycle_disk必须为cycle_op的整数倍");
+    int disk_start = (++write_count / cycle_disk) + 1;
+    int op_start = (write_count / cycle_op) + 1;
 
     // 优先选择对应tag对应size分区有空闲空间的磁盘
-    // std::vector<int> tag_list = {tag, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; 
-    // std::vector<int> tag_list = {tag, -1, 1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
     std::vector<int> tag_list = {tag, -1, 1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5};
-    // std::vector<int> tag_list = {tag, -1,15,5,2,11,8,10,14,6,16,3,9,12,7,13,4,1};
 
-    // 将索引2到tag_list[idx]=tag之间的内容移动到最后面
-    auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
-    if (it != tag_list.end()) {
-        int idx = std::distance(tag_list.begin(), it);
-        // 使用rotate算法将[begin+2, it+1)区间移到末尾
-        std::rotate(tag_list.begin() + 2, it + 1, tag_list.end());
+    int strategy = 3;
+    if(strategy == 1) {
+        std::mt19937 gen(TIME);
+        // 策略1 随机打乱 tag_list.begin() + 2, tag_list.end()
+        std::shuffle(tag_list.begin() + 2, tag_list.end(), gen);
     }
+    else if(strategy == 2) {
+        // 策略2 将索引2到tag_list[idx]=tag之间的内容移动到最后面
+        auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
+        std::rotate(tag_list.begin() + 2, it+1, tag_list.end());
+    }
+    else if(strategy == 3) {
+        // 策略3 将索引2到tag_list[idx]=tag之间的内容反向后与后面交替合并
+        auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
+        std::reverse(tag_list.begin() + 2, it + 1);
+        std::vector<int> first_part(tag_list.begin() + 2, it + 1);
+        std::vector<int> second_part(it + 1, tag_list.end());
+        tag_list.erase(tag_list.begin() + 2, tag_list.end());
+        size_t i = 0, j = 0;
+        while (i < first_part.size() || j < second_part.size()) {
+            if (j < second_part.size())
+                tag_list.push_back(second_part[j++]);
+            if (i < first_part.size())
+                tag_list.push_back(first_part[i++]);
+        }
+    }
+
+    tag_list.push_back(17);
     for (int i = 2; i < tag_list.size(); ++i)
     {
         if (tag_list[i] == tag)
@@ -60,12 +84,10 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
     }
     std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5};
     size_list[obj_size] = 0;
+    
+    // 数据区交替写入进行
+    std::vector<int> op_list = op_start % 2 == 0 ? std::vector<int>{0, 1} : std::vector<int>{1, 0};
 
-    std::vector<int> op_list = {0, 1};
-    std::random_device rd;
-    std::mt19937 gen(TIME);
-    std::shuffle(op_list.begin(), op_list.end(), gen);
-    // std::shuffle(tag_list.begin() + 2, tag_list.end(), gen);
     for (int tag_ : tag_list)
     {
         if (space.size() == 3 - BACK_NUM)
@@ -78,7 +100,7 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
                 break;
             if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0)
                 continue;
-            for (int i = 1 + tmp_time; i <= N + tmp_time; ++i)
+            for (int i = 1 + disk_start; i <= N + disk_start; ++i)
             {
                 int disk_id = (i - 1) % N + 1;
                 // 检查磁盘是否已经在space中
@@ -109,7 +131,7 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
     assert(space.size() == 3 - BACK_NUM && "数据区域磁盘空间不足");
 
     // 寻找备份区
-    for (int i = 1 + tmp_time; i <= N + tmp_time; ++i)
+    for (int i = 1 + disk_start; i <= N + disk_start; ++i)
     {
         if (space.size() == 3)
             break;

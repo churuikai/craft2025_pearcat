@@ -156,6 +156,8 @@ public:
     int busy_count = 0;
     int over_load_count = 0;
 
+    int write_count = 0;
+
     Controller() {}
 
     // 删除
