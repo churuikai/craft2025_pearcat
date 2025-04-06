@@ -154,6 +154,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             for (int i = 5; i > 1; --i) 
             {
                 // 计算每个分区的 size = date_size*该tag比例*该tag对应大小i的比例
+                if(tag_size_db[tag_id][i - 1]==0) continue;
                 int size_temp = static_cast<int>(data_size1 * this_tag_size_rate[tag_id] * tag_size_db[tag_id][i - 1]);
                 size_temp = size_temp - size_temp % i; // 取整对齐粒度
                 auto& this_tables = get_parts(tag_id, i);
@@ -189,6 +190,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             for (int i = 5; i > 1; --i) 
             {
                 // 计算每个分区的 size = date_size*该tag比例*该tag对应大小i的比例
+                if(tag_size_db[tag_id][i - 1]==0) continue;
                 int size_temp = static_cast<int>(data_size2 * this_tag_size_rate[tag_id] * tag_size_db[tag_id][i - 1]);
                 size_temp = size_temp - size_temp % i; // 取整对齐粒度
                 auto& this_tables = get_parts(tag_id, i);
