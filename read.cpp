@@ -1,8 +1,12 @@
-#include "disk_obj_req.h"
 #include "constants.h"
+#include "io.h"
+#include "controller.h"
+#include "disk_obj_req.h"
+
 #include "debug.h"
 #include "token_table.h"
 #include "data_analysis.h"
+#include <cmath>
 void process_read(Controller &controller)
 {
     int n_read;
@@ -42,34 +46,60 @@ void Controller::add_req(int req_id, int obj_id)
     int tag = OBJECTS[obj_id].tag;
     int size = OBJECTS[obj_id].size;
     // 获取标签读频率顺序（由小到大排序）
-    auto& order_tag = get_sorted_read_tag();
+    auto &order_tag = get_sorted_read_tag(this->timestamp);
     // 更新磁盘
     for (int i = 0; i < 3 - BACK_NUM; ++i)
     {
         auto [disk_id, cells_idx] = OBJECTS[obj_id].replicas[i];
         // 计算当前负载能力 比 最低负载能力 的倍数
-        float n = (1.0 * G / DISKS[disk_id].req_pos.size() / V)/LOAD_COEFFICIENT;
+        float n = (1.0 * G / DISKS[disk_id].req_pos.size() / V) / LOAD_COEFFICIENT;
         // 超过8倍 不考虑舍弃
-        // if (n > 8) break;
+        if (n > 12) break;
         // 计算需要舍弃的请求数量
+        // int m = M - 8 - (int)n;
         int m = M - 7 - (int)n;
-        if(m<0) m = 0;
+        if (m < 0) m = 0;
         // 从低频到高频依次判断是否舍弃
         for (int j = 0; j < m; ++j)
         {
-            if (tag == order_tag[j])
+
+            bool is_alone = true;
+            // 获取obj邻居
+            for(auto& [disk_id, cell_idxs] : this->OBJECTS[obj_id].replicas)
+            {
+
+                for(auto& cell_idx : cell_idxs)
+                {
+                    if (not is_alone) break;
+                    int prev_cell_idx = cell_idx;
+                    int next_cell_idx = cell_idx;
+                    for(int k = 0; k < 6; ++k)
+                    {
+                        prev_cell_idx = prev_cell_idx == 1 ? size : prev_cell_idx - 1;
+                        next_cell_idx = next_cell_idx == size ? 1 : next_cell_idx + 1;
+                        if(this->DISKS[disk_id].cells[prev_cell_idx]->req_ids.size() > 0 or this->DISKS[disk_id].cells[next_cell_idx]->req_ids.size() > 0)
+                        {
+                            is_alone = false;
+                            break;
+                        }
+                    }
+
+                }
+                break;
+            }
+            
+            if (tag == order_tag[j] and this->OBJECTS[obj_id].req_ids.size() == 0 and is_alone)
             {
                 is_over_load = true;
                 over_load_reqs.push_back(req_id);
                 break;
             }
         }
-
     }
     if (not is_over_load)
     {
         // 更新请求
-        REQS[req_id % LEN_REQ].update(req_id, obj_id, timestamp);
+        REQS[req_id % LEN_REQ].update(req_id, OBJECTS[obj_id], timestamp);
         // 更新对象
         OBJECTS[obj_id].req_ids.insert(req_id);
         // 更新activate_reqs
@@ -109,20 +139,15 @@ std::pair<std::vector<std::string>, std::vector<int>> Controller::read()
         ops.push_back(op2);
         completed_reqs.insert(completed_reqs.end(), completed_req2.begin(), completed_req2.end());
     }
-    // 更新activate_reqs
-    for (int req_id : completed_reqs) {
-        activate_reqs.erase(req_id);
-    }
+
     return {ops, completed_reqs};
 }
 
-
 std::pair<std::string, std::vector<int>> Disk::read(int op_id)
 {
-    int &point =            op_id == 1 ? point1 : point2;
-    int &tokens =           op_id == 1 ? tokens1 : tokens2;
-    int &prev_read_token =  op_id == 1 ? prev_read_token1 : prev_read_token2;
-
+    int &point = op_id == 1 ? point1 : point2;
+    int &tokens = op_id == 1 ? tokens1 : tokens2;
+    int &prev_read_token = op_id == 1 ? prev_read_token1 : prev_read_token2;
 
     int start = _get_best_start(op_id);
 
@@ -147,12 +172,12 @@ std::pair<std::string, std::vector<int>> Disk::read(int op_id)
 
 int Disk::_get_best_start(int op_id)
 {
-    int &point =            op_id == 1 ? point1 : point2;
-    int &tokens =           op_id == 1 ? tokens1 : tokens2;
-    int &prev_read_token =  op_id == 1 ? prev_read_token1 : prev_read_token2;
-    int data_size =         op_id == 1 ? data_size1 : data_size2;
-    int part_start =        op_id == 1 ? 1 : data_size1+1;
-    int part_end =          op_id == 1 ? data_size1 : data_size1+data_size2;
+    int &point = op_id == 1 ? point1 : point2;
+    int &tokens = op_id == 1 ? tokens1 : tokens2;
+    int &prev_read_token = op_id == 1 ? prev_read_token1 : prev_read_token2;
+    int data_size = op_id == 1 ? data_size1 : data_size2;
+    int part_start = op_id == 1 ? 1 : data_size1 + 1;
+    int part_end = op_id == 1 ? data_size1 : data_size1 + data_size2;
 
     if (req_pos.empty())
     {
@@ -160,8 +185,10 @@ int Disk::_get_best_start(int op_id)
     }
     if (req_pos.size() == 1)
     {
-        if(req_pos.begin()->second[0] >= part_start and req_pos.begin()->second[0] <= part_end) return req_pos.begin()->second[0];
-        else return -1;
+        if (req_pos.begin()->second[0] >= part_start and req_pos.begin()->second[0] <= part_end)
+            return req_pos.begin()->second[0];
+        else
+            return -1;
     }
     // 找到离point最近的
     int start = point;
@@ -197,12 +224,12 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
     //     point = start;
     // }
 
-    int &point =            op_id == 1 ? point1 : point2;
-    int &tokens =           op_id == 1 ? tokens1 : tokens2;
-    int &prev_read_token =  op_id == 1 ? prev_read_token1 : prev_read_token2;
-    int data_size =         op_id == 1 ? data_size1 : data_size2;
-    int part_start =        op_id == 1 ? 1 : data_size1+1;
-    int part_end =          op_id == 1 ? data_size1 : data_size1+data_size2;
+    int &point = op_id == 1 ? point1 : point2;
+    int &tokens = op_id == 1 ? tokens1 : tokens2;
+    int &prev_read_token = op_id == 1 ? prev_read_token1 : prev_read_token2;
+    int data_size = op_id == 1 ? data_size1 : data_size2;
+    int part_start = op_id == 1 ? 1 : data_size1 + 1;
+    int part_end = op_id == 1 ? data_size1 : data_size1 + data_size2;
 
     int win_end = point;
     auto fo_seq = EMPTY_SEQUENCE;
@@ -214,12 +241,12 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         return not cells[cell_idx]->req_ids.empty() and cell_idx >= part_start and cell_idx <= part_end;
     };
 
-
     bool arrive = false;
     for (int i = 0; i < 13; ++i)
     {
         // 更新滑动窗口序列
-        if(win_end == start) arrive = true;
+        if (win_end == start)
+            arrive = true;
         update_sequence(fo_seq, is_read(win_end));
         win_end = win_end % size + 1;
     }
@@ -233,8 +260,7 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         if (decision.is_r)
         {
             path.append(1, 'r');
-            auto completed_reqs_cell = cells[point]->read();
-            completed_reqs.insert(completed_reqs.end(), completed_reqs_cell.begin(), completed_reqs_cell.end());
+            _read_cell(point, completed_reqs);
         }
         else
         {
@@ -243,78 +269,61 @@ std::tuple<std::string, std::vector<int>, std::vector<int>> Disk::_read_by_best_
         tokens -= decision.cost;
         prev_read_token = decision.next_token;
         point = point % size + 1;
-        if(win_end == start) arrive = true;
+        if (win_end == start)
+            arrive = true;
         update_sequence(fo_seq, is_read(win_end));
         win_end = win_end % size + 1;
     }
     return {path, completed_reqs, occupied_obj};
 }
 
-void Req::update(int req_id, int obj_id, int timestamp)
+void Disk::_read_cell(int cell_idx, std::vector<int>& completed_reqs)
+{
+    if(cells[cell_idx]->req_ids.empty() or cells[cell_idx]->obj_id == 0)
+    {
+        return;
+    }
+    // 检查req是否完成 更新完成的 req
+    for (int req_id : cells[cell_idx]->req_ids)
+    {
+        // 更新请求
+        controller->REQS[req_id % LEN_REQ].remain_units.erase(cells[cell_idx]->unit_id);
+        // 如果请求完成
+        if (controller->REQS[req_id % LEN_REQ].remain_units.empty())
+        {
+            completed_reqs.push_back(req_id);
+            // 更新对象
+            controller->OBJECTS[cells[cell_idx]->obj_id].req_ids.erase(req_id);
+            // 更新磁盘
+            for (auto &[disk_id, cell_idxs] : controller->OBJECTS[cells[cell_idx]->obj_id].replicas)
+            {
+                controller->DISKS[disk_id].req_pos.erase(req_id);
+            }
+            // 更新活跃请求
+            controller->activate_reqs.erase(req_id);
+        }
+    }
+    // 更新cell
+    for (auto &[disk_id, cell_idxs] : controller->OBJECTS[cells[cell_idx]->obj_id].replicas)
+    {
+        assert(cells[cell_idx]->obj_id != 0);
+        int unit_cell_idx = cell_idxs[cells[cell_idx]->unit_id -1];
+        controller->DISKS[disk_id].req_cells_num-=controller->DISKS[disk_id].cells[unit_cell_idx]->req_ids.size();
+        controller->DISKS[disk_id].cells[unit_cell_idx]->req_ids.clear();
+    }
+    return;
+}
+
+void Req::update(int req_id, Object &obj, int timestamp)
 {
     // this->id = req_id;
-    this->obj_id = obj_id;
+    this->obj_id = obj.id;
     remain_units.clear();
-    for (int i = 1; i <= OBJECTS[obj_id].size; ++i)
+    for (int i = 1; i <= obj.size; ++i)
     {
         remain_units.insert(i);
     }
     this->timestamp = timestamp;
-}
-
-// Cell的read方法实现（依赖其他类）
-std::vector<int> Cell::read()
-{
-
-    std::vector<int> completed_reqs;
-    // 检查req是否完成 更新完成的 req
-    for (int req_id : req_ids)
-    {
-        REQS[req_id % LEN_REQ].remain_units.erase(unit_id);
-        if (REQS[req_id % LEN_REQ].remain_units.empty())
-        {
-            completed_reqs.push_back(req_id);
-            // 更新对象
-            OBJECTS[REQS[req_id % LEN_REQ].obj_id].req_ids.erase(req_id);
-        }
-    }
-
-    // 更新磁盘
-    if (!completed_reqs.empty() && obj_id > 0)
-    {
-        // 修复req_id使用问题
-        int first_req_id = *req_ids.begin();
-        for (auto &[disk_id, cell_idxs] : OBJECTS[REQS[first_req_id % LEN_REQ].obj_id].replicas)
-        {
-            for (int req_id : completed_reqs)
-            {
-                DISKS[disk_id].remove_req(req_id);
-            }
-            for (int cell_idx : cell_idxs)
-            {
-                for (int req_id : completed_reqs)
-                {
-                    if (DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
-                    {
-                        DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
-                        DISKS[disk_id].req_cells_num--;
-                    }
-                }
-            }
-        }
-    }
-
-    return completed_reqs;
-}
-
-void Disk::remove_req(int req_id)
-{
-    // cell在读取中已经被清除req_ids，所以不需要再清除
-    if (req_pos.find(req_id) != req_pos.end())
-    {
-        req_pos.erase(req_id);
-    }
-    return;
 }
 
 // int Disk::_get_best_start(int timestamp)

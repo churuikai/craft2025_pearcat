@@ -5,7 +5,7 @@ extern std::vector<std::vector<std::vector<int>>> FRE;
 // 函数声明
 // 频率相关函数声明
 // int get_freq(int tag, int timestamp, int op_type); // 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
-std::vector<int>& get_sorted_read_tag(); // 获取排序后的当前时间读频率的tag
+std::vector<int>& get_sorted_read_tag(int timestamp); // 获取排序后的当前时间读频率的tag
 
 void process_data_analysis();
 

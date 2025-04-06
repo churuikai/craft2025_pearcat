@@ -1,5 +1,8 @@
-#include "disk_obj_req.h"
 #include "constants.h"
+#include "io.h"
+#include "controller.h"
+#include "disk_obj_req.h"
+
 #include <iostream>
 #include <algorithm>
 #include "debug.h"
@@ -47,18 +50,13 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
     // 优先选择对应tag对应size分区有空闲空间的磁盘
     std::vector<int> tag_list = {tag, -1, 1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5};
 
-    int strategy = 3;
+    int strategy = 2;
     if(strategy == 1) {
-        std::mt19937 gen(TIME);
-        // 策略1 随机打乱 tag_list.begin() + 2, tag_list.end()
-        std::shuffle(tag_list.begin() + 2, tag_list.end(), gen);
-    }
-    else if(strategy == 2) {
         // 策略2 将索引2到tag_list[idx]=tag之间的内容移动到最后面
         auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
         std::rotate(tag_list.begin() + 2, it+1, tag_list.end());
     }
-    else if(strategy == 3) {
+    else if(strategy == 2) {
         // 策略3 将索引2到tag_list[idx]=tag之间的内容反向后与后面交替合并
         auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
         std::reverse(tag_list.begin() + 2, it + 1);
@@ -156,6 +154,7 @@ Object *Controller::write(int obj_id, int obj_size, int tag)
     Object &obj = OBJECTS[obj_id];
     obj.size = obj_size;
     obj.tag = tag;
+    obj.id = obj_id;
 
     // 获取磁盘
     auto space = _get_disk(obj_size, tag);

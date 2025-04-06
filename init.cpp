@@ -1,11 +1,12 @@
 #include "constants.h"
 #include "disk_obj_req.h"
+#include "controller.h"
 #include <limits>
 #include "debug.h"
 #include "data_analysis.h"
 
 
-void init() {
+void Controller::disk_init() {
     info("=============================================================");
     info("备份区数量: "+ std::to_string(BACK_NUM)+ ", 是否反向: "+ std::to_string(IS_INTERVAL_REVERSE)+ ", 是否按大小分配: "+ std::to_string(IS_PART_BY_SIZE));
 
@@ -62,6 +63,7 @@ void init() {
     for (int i = 1; i <= N; ++i) {
         DISKS[i].id = i;
         DISKS[i].back = BACK_NUM;
+        DISKS[i].controller = this;
         DISKS[i].init(V, TAG_ORDERS[i-1], TAG_SIZE_RATE, TAG_SIZE_DB);
     }
 

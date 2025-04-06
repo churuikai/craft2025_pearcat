@@ -2,7 +2,7 @@
 #include <array>
 #include <functional>
 
-// 用于编译期计算的辅助函数
+// 辅助函数
 inline constexpr int get_next_token(int token) {
     switch (token) {
         case 80: return 64;

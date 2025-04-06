@@ -19,9 +19,9 @@ int get_freq_fine(int tag, int timestamp, int op_type)
 }
 
 // 获取排序后的当前TIME读频率的tag
-std::vector<int> &get_sorted_read_tag()
+std::vector<int> &get_sorted_read_tag(int timestamp)
 {
-    int fine_slice_idx = (TIME - 1) / FINE_GRANULARITY + 1;
+    int fine_slice_idx = (timestamp - 1) / FINE_GRANULARITY + 1;
     return SORTED_READ_TAGS[fine_slice_idx];
 }
 

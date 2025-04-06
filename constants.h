@@ -2,9 +2,8 @@
 #include <vector>
 #include <array>
 
-inline int T, M, N, V, G, k, TIME;
+inline int T, M, N, V, G, k;
 inline float G_float;
-
 
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
@@ -29,23 +28,14 @@ inline const int MAX_DISK_NUM = (10 + 1);
 inline const int MAX_DISK_SIZE = (16384 + 1);
 inline const int MAX_REQUEST_NUM = (30000000 + 1);
 inline const int MAX_OBJECT_NUM = (100000 + 1);
-inline const int LEN_REQ = 30000000;
+inline const int LEN_REQ = 1000000;
 inline const int REP_NUM = 3;
 inline const int EXTRA_TIME = 105;
 inline const int MAX_G = 1000;
 
 
 // 负载系数
-inline const float LOAD_COEFFICIENT = 0.76*1.599818022273934e-05;
-
-// 复杂常量也可以用inline
-// inline const std::vector<double> TAG_SIZE_RATE = {0, 
-// 0.09681, 0.0393 , 0.10434, 0.09115, 0.04644, 0.02577, 0.09509, 0.07413,
-// 0.0244 , 0.07595, 0.03104, 0.08461, 0.02144, 0.0546 , 0.02681, 0.10803};
-// official_sample 最大空间比例
-// inline const std::vector<double> TAG_SIZE_RATE = {0, 
-// 0.02874, 0.06872, 0.0834, 0.04642, 0.05478, 0.04244, 0.04744, 0.11655, 0.07079, 0.06028, 0.05884, 0.12248, 0.03096, 0.02991, 0.08102, 0.05724};
-// practice_sample 平均空间比例
+inline const float LOAD_COEFFICIENT = 0.82*1.599818022273934e-05;
 
 inline std::vector<std::vector<int>> TAG_ORDERS;
 

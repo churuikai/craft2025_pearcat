@@ -6,29 +6,29 @@ void process_busy(Controller &controller)
 {
     // 清理长周期的请求
     std::vector<int> busy_req_ids;
-    if (TIME % 10 == 0)
+    if (controller.timestamp % 10 == 0)
     {
         for (int req_id : controller.activate_reqs)
         {
-            if (REQS[req_id % LEN_REQ].timestamp + 95 < TIME)
+            if (controller.REQS[req_id % LEN_REQ].timestamp + 95 < controller.timestamp)
             {
                 busy_req_ids.push_back(req_id);
                 // 释放磁盘
-                for (auto &[disk_id, cell_idxs] : OBJECTS[REQS[req_id % LEN_REQ].obj_id].replicas)
+                for (auto &[disk_id, cell_idxs] : controller.OBJECTS[controller.REQS[req_id % LEN_REQ].obj_id].replicas)
                 {
                     for (int cell_idx : cell_idxs)
                     {
-                        if (DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != DISKS[disk_id].cells[cell_idx]->req_ids.end())
+                        if (controller.DISKS[disk_id].cells[cell_idx]->req_ids.find(req_id) != controller.DISKS[disk_id].cells[cell_idx]->req_ids.end())
                         {
-                            DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
-                            DISKS[disk_id].req_cells_num--;
+                            controller.DISKS[disk_id].cells[cell_idx]->req_ids.erase(req_id);
+                            controller.DISKS[disk_id].req_cells_num--;
                         }
                     }
                     // 释放磁盘
-                    DISKS[disk_id].req_pos.erase(req_id);
+                    controller.DISKS[disk_id].req_pos.erase(req_id);
                 }
                 // 释放对象
-                OBJECTS[REQS[req_id % LEN_REQ].obj_id].req_ids.erase(req_id);
+                controller.OBJECTS[controller.REQS[req_id % LEN_REQ].obj_id].req_ids.erase(req_id);
             }
         }
         // 清理activate_reqs
@@ -63,6 +63,6 @@ void process_busy(Controller &controller)
     controller.over_load_count += n_over_load;
     // 更新负载系数
     for (int i = 0; i < N; i++) {
-        DISKS[i].load_coefficient = 1.0*G/DISKS[i].req_pos.size()/V;
+        controller.DISKS[i].load_coefficient = 1.0*G/controller.DISKS[i].req_pos.size()/V;
     }
 }

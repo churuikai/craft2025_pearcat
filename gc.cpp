@@ -1,5 +1,5 @@
 #include "disk_obj_req.h"
-
+#include "controller.h"
 void process_gc(Controller &controller)
 {
     (void)scanf("%*s%*s");

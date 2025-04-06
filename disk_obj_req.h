@@ -1,24 +1,18 @@
 #pragma once
 #include "constants.h"
+#include "controller.h"
 #include <vector>
 #include <unordered_set>
 #include <cassert>
 #include "tools.h"
 
 // 前向声明
+class Controller;
 class Disk;
 class Object;
 class Req;
 struct Part;
 struct Cell;
-
-// extern std::vector<std::vector<std::vector<int>>> FRE;
-// extern int T, M, N, V, G, k, TIME;
-// inline float G_float;
-extern Disk DISKS[MAX_DISK_NUM];
-extern Object OBJECTS[MAX_OBJECT_NUM];
-extern Req REQS[LEN_REQ];
-
 
 
 // 磁盘点
@@ -32,8 +26,7 @@ struct Cell
     Cell() : obj_id(0), unit_id(0), tag(0), part(nullptr) {}
     // 释放
     void free(){req_ids.clear(); obj_id = 0; unit_id = 0; tag = 0;}
-    // 读取
-    std::vector<int> read();
+
 };
 
 // 分区
@@ -54,6 +47,8 @@ struct Part
 class Disk
 {
 public:
+    Controller* controller;
+
     int id;
     int size;
     Cell** cells; // 改为指针数组
@@ -102,13 +97,13 @@ public:
 
     void add_req(int req_id, const std::vector<int> &cells_idx);
 
-    void remove_req(int req_id);
-
     std::pair<std::string, std::vector<int>> read(int op_id);
+
+    int _get_best_start(int op_id);
 
     std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
 
-    int _get_best_start(int op_id);
+    void _read_cell(int cell_idx, std::vector<int>& completed_reqs);
 
     void _get_consume_token(int start_point, int last_token, int target_point);
 };
@@ -140,53 +135,5 @@ public:
     int obj_id;
     Int3Set remain_units;
     int timestamp;
-    void update(int req_id, int obj_id, int timestamp);
+    void update(int req_id, Object& obj, int timestamp);
 };
-
-
-// 控制器
-class Controller
-{
-public:
-    int timestamp;
-    std::unordered_set<int> activate_reqs;
-    std::vector<int> over_load_reqs;
-
-
-    int busy_count = 0;
-    int over_load_count = 0;
-
-    int write_count = 0;
-
-    Controller() {}
-
-    // 删除
-    std::vector<int> delete_obj(int obj_id);
-
-    // 写入
-    Object *write(int obj_id, int obj_size, int tag);
-
-    // 处理请求
-    std::pair<std::vector<std::string>, std::vector<int>> read();
-
-    // 添加请求
-    void add_req(int req_id, int obj_id);
-
-    // 同步时间
-    void sync(int timestamp);
-
-private:
-    // 获取磁盘和对应分区
-    std::vector<std::pair<int, Part*>> _get_disk(int obj_size, int tag);
-};
-
-// 读写删频率
-
-
-void init();
-void process_timestamp(int timestamp, Controller &controller);
-void process_delete(Controller &controller);
-void process_write(Controller &controller);
-void process_read(Controller &controller);
-void process_busy(Controller &controller);
-void process_gc(Controller &controller);

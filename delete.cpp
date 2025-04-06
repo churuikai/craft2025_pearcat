@@ -1,4 +1,6 @@
 #include "constants.h"
+#include "io.h"
+#include "controller.h"
 #include "disk_obj_req.h"
 
 void process_delete(Controller &controller)
