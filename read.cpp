@@ -26,7 +26,7 @@ void process_read(Controller &controller)
     }
 
     // 输出完成的请求
-    printf("%d\n", completed_requests.size());
+    printf("%d\n", (int)completed_requests.size());
     for (int req_id : completed_requests)
     {
         printf("%d\n", req_id);

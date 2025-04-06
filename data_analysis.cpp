@@ -40,19 +40,19 @@ void process_data_analysis()
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
-            scanf("%d", &FRE[tag_id][i][0]);
+            (void)scanf("%d", &FRE[tag_id][i][0]);
     }
     // 读取写入频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
-            scanf("%d", &FRE[tag_id][i][1]);
+            (void)scanf("%d", &FRE[tag_id][i][1]);
     }
     // 读取读取频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
-            scanf("%d", &FRE[tag_id][i][2]);
+            (void)scanf("%d", &FRE[tag_id][i][2]);
     }
     // 插值得到细粒度频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)

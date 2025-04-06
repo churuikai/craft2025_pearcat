@@ -30,7 +30,7 @@ void process_delete(Controller &controller)
     }
 
     // 输出结果
-    printf("%d\n", aborted_requests.size());
+    printf("%d\n", (int)aborted_requests.size());
     for (int req_id : aborted_requests)
     {
         printf("%d\n", req_id);
