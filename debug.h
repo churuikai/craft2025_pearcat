@@ -1,208 +1,201 @@
 #pragma once
 
-// 简化的调试输出库，不使用模板
-#include <iostream>
-#include <fstream>
 #include <string>
-#include <vector>
-#include <map>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
+#include <fstream>
+#include <mutex>
+#include <chrono>
+#include <ctime>
+#include <sstream>
+#include <type_traits>
+#include <iterator>
 
-//  调试开关和文件设置
-#ifndef DEBUG
-// #define DEBUG 0
+// SFINAE helper: detects if a type T is iterable (has std::begin/end),
+// but we explicitly exclude std::string so that it is printed as a normal type.
+template <typename T, typename = void>
+struct is_iterable : std::false_type {};
+
+template <typename T>
+struct is_iterable<T, std::void_t<
+    decltype(std::begin(std::declval<T>())),
+    decltype(std::end(std::declval<T>()))
+    >> : std::true_type {};
+
+template <typename T>
+constexpr bool is_iterable_v = is_iterable<T>::value;
+
+// Default file name prefixes and suffixes. These will be combined with a run-specific timestamp.
+#ifndef DEFAULT_DEBUG_FILE_PREFIX
+#define DEFAULT_DEBUG_FILE_PREFIX "log_"
 #endif
 
-#ifndef INFO
-// #define INFO 0
+#ifndef DEFAULT_INFO_FILE_PREFIX
+#define DEFAULT_INFO_FILE_PREFIX "info_"
 #endif
 
-#ifndef DEBUG_FILE
-#define DEBUG_FILE "log.txt"
+#ifndef DEFAULT_DEBUG_FILE_SUFFIX
+#define DEFAULT_DEBUG_FILE_SUFFIX ".txt"
 #endif
 
-#ifndef INFO_FILE
-#define INFO_FILE "info.txt"
+#ifndef DEFAULT_INFO_FILE_SUFFIX
+#define DEFAULT_INFO_FILE_SUFFIX ".txt"
 #endif
 
-// 定义debug宏，当DEBUG为0时，debug函数调用会被完全移除
-#ifdef DEBUG
-#define debug(...) debug(__VA_ARGS__)
+// Logger class: a singleton that handles logging with thread safety,
+// timestamped entries, unique file names per run, and support for printing
+// iterable containers.
+class Logger {
+public:
+    static Logger& instance() {
+        static Logger instance;
+        return instance;
+    }
+    
+    // Initialize logs: generate new log file names and clear the files.
+    void init_logs() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        generate_file_names();
+        {
+            std::ofstream dbg(debug_file_name_, std::ios::trunc);
+        }
+        {
+            std::ofstream inf(info_file_name_, std::ios::trunc);
+        }
+        debug_count_ = 0;
+        info_count_ = 0;
+    }
+    
+    // Log a debug message using variadic arguments.
+    template<typename... Args>
+    void log_debug(const Args&... args) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::ofstream dbg(debug_file_name_, std::ios::app);
+        dbg << timestamp() << " [DEBUG " << debug_count_++ << "]: ";
+        log_impl(dbg, args...);
+        dbg << "\n";
+    }
+    
+    // Log an info message using variadic arguments.
+    template<typename... Args>
+    void log_info(const Args&... args) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::ofstream inf(info_file_name_, std::ios::app);
+        inf << timestamp() << " [INFO " << info_count_++ << "]: ";
+        log_impl(inf, args...);
+        inf << "\n";
+    }
+    
+private:
+    Logger() : debug_count_(0), info_count_(0) {
+        generate_file_names();
+    }
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
+    
+    std::mutex mutex_;
+    int debug_count_;
+    int info_count_;
+    std::string debug_file_name_;
+    std::string info_file_name_;
+    
+    // Returns a human-readable timestamp for log entries.
+    std::string timestamp() {
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+        char buf[32];
+#if defined(_WIN32) || defined(_WIN64)
+        ctime_s(buf, sizeof(buf), &now_time);
+        std::string time_str(buf);
+        if (!time_str.empty() && time_str.back() == '\n')
+            time_str.pop_back();
+        return time_str;
 #else
-#define debug(...) ((void)0)
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_time));
+        return std::string(buf);
 #endif
-
-// 定义info宏，当INFO为0时，info函数调用会被完全移除
-#ifdef INFO
-#define info(...) info(__VA_ARGS__)
+    }
+    
+    // Generates a filename-friendly timestamp (e.g. "20250407_123456").
+    std::string file_timestamp() {
+        auto now = std::chrono::system_clock::now();
+        std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+        char buf[32];
+#if defined(_WIN32) || defined(_WIN64)
+        std::tm tm;
+        localtime_s(&tm, &now_time);
+        std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", &tm);
 #else
-#define info(...) ((void)0)
+        std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", std::localtime(&now_time));
+#endif
+        return std::string(buf);
+    }
+    
+    // Generate new file names for this run based on the current timestamp.
+    void generate_file_names() {
+        debug_file_name_ = std::string(DEFAULT_DEBUG_FILE_PREFIX) + file_timestamp() + DEFAULT_DEBUG_FILE_SUFFIX;
+        info_file_name_ = std::string(DEFAULT_INFO_FILE_PREFIX) + file_timestamp() + DEFAULT_INFO_FILE_SUFFIX;
+    }
+    
+    // Base case: no arguments.
+    void log_impl(std::ostream& out) {}
+    
+    // Overload for iterable types (excluding std::string).
+    template<typename T>
+    auto log_impl(std::ostream& out, const T& arg) 
+      -> std::enable_if_t<is_iterable_v<T> && !std::is_same<T, std::string>::value> 
+    {
+        out << "[";
+        bool first = true;
+        for (const auto& item : arg) {
+            if (!first)
+                out << ", ";
+            first = false;
+            log_impl(out, item);
+        }
+        out << "]";
+    }
+    
+    // Generic overload for a single non-container argument (or std::string).
+    template<typename T>
+    auto log_impl(std::ostream& out, const T& arg) 
+      -> std::enable_if_t<!(is_iterable_v<T> && !std::is_same<T, std::string>::value)> 
+    {
+        out << arg;
+    }
+    
+    // Overload for multiple arguments.
+    template<typename T, typename... Args>
+    void log_impl(std::ostream& out, const T& first, const Args&... rest) {
+        log_impl(out, first);
+        if constexpr (sizeof...(rest) > 0) {
+            out << " ";
+            log_impl(out, rest...);
+        }
+    }
+};
+
+// -- Public interface functions --
+
+// Clears logs and creates new log/info files for this run.
+inline void init_logs() {
+    Logger::instance().init_logs();
+}
+
+#ifdef DEBUG
+// Debug function: accepts any number of arguments.
+template<typename... Args>
+inline void debug(const Args&... args) {
+    Logger::instance().log_debug(args...);
+}
+#else
+inline void debug(...) {}
 #endif
 
-// 全局调试计数
-#ifdef DEBUG
-extern int DEBUG_COUNT;
+#ifdef INFO
+// Info function: accepts any number of arguments.
+template<typename... Args>
+inline void info(const Args&... args) {
+    Logger::instance().log_info(args...);
+}
+#else
+inline void info(...) {}
 #endif
-
-// 全局信息计数
-#ifdef INFO
-extern int INFO_COUNT;
-#endif
-
-// 基础类型输出函数声明
-#if defined(DEBUG) || defined(INFO)
-void debug_print(int value, std::ofstream& out);
-void debug_print(long value, std::ofstream& out);
-void debug_print(long long value, std::ofstream& out);
-void debug_print(unsigned int value, std::ofstream& out);
-void debug_print(unsigned long value, std::ofstream& out);
-void debug_print(unsigned long long value, std::ofstream& out);
-void debug_print(float value, std::ofstream& out);
-void debug_print(double value, std::ofstream& out);
-void debug_print(bool value, std::ofstream& out);
-void debug_print(char value, std::ofstream& out);
-void debug_print(const char* value, std::ofstream& out);
-void debug_print(const std::string& value, std::ofstream& out);
-
-// 容器类型输出函数声明
-void debug_print(const std::vector<int>& vec, std::ofstream& out);
-void debug_print(const std::vector<std::string>& vec, std::ofstream& out);
-void debug_print(const std::vector<double>& vec, std::ofstream& out);
-void debug_print(const std::vector<bool>& vec, std::ofstream& out);
-void debug_print(const std::vector<char>& vec, std::ofstream& out);
-
-void debug_print(const std::map<int, int>& m, std::ofstream& out);
-void debug_print(const std::map<std::string, int>& m, std::ofstream& out);
-void debug_print(const std::map<int, std::string>& m, std::ofstream& out);
-void debug_print(const std::map<std::string, std::string>& m, std::ofstream& out);
-
-void debug_print(const std::set<int>& s, std::ofstream& out);
-void debug_print(const std::set<std::string>& s, std::ofstream& out);
-
-void debug_print(const std::unordered_map<int, int>& m, std::ofstream& out);
-void debug_print(const std::unordered_map<std::string, int>& m, std::ofstream& out);
-void debug_print(const std::unordered_map<int, std::string>& m, std::ofstream& out);
-
-void debug_print(const std::unordered_set<int>& s, std::ofstream& out);
-void debug_print(const std::unordered_set<std::string>& s, std::ofstream& out);
-
-// 对偶类型
-void debug_print(const std::pair<int, int>& p, std::ofstream& out);
-void debug_print(const std::pair<std::string, int>& p, std::ofstream& out);
-void debug_print(const std::pair<int, std::string>& p, std::ofstream& out);
-void debug_print(const std::pair<std::string, std::string>& p, std::ofstream& out);
-
-// 通用未知类型处理
-void debug_print_unknown(const void* obj, std::ofstream& out);
-#endif // defined(DEBUG) || defined(INFO)
-
-// 单参数调试函数
-#ifdef DEBUG
-void debug(int value);
-void debug(long value);
-void debug(long long value);
-void debug(unsigned int value);
-void debug(unsigned long value);
-void debug(unsigned long long value);
-void debug(float value);
-void debug(double value);
-void debug(bool value);
-void debug(char value);
-void debug(const char* value);
-void debug(const std::string& value);
-void debug(const std::vector<int>& vec);
-void debug(const std::vector<std::string>& vec);
-void debug(const std::vector<double>& vec);
-void debug(const std::vector<bool>& vec);
-void debug(const std::vector<char>& vec);
-void debug(const std::map<int, int>& m);
-void debug(const std::map<std::string, int>& m);
-void debug(const std::map<int, std::string>& m);
-void debug(const std::map<std::string, std::string>& m);
-void debug(const std::set<int>& s);
-void debug(const std::set<std::string>& s);
-
-// 双参数调试函数
-void debug(int v1, int v2);
-void debug(const std::string& v1, int v2);
-void debug(int v1, const std::string& v2);
-void debug(const std::string& v1, const std::string& v2);
-void debug(const char* v1, int v2);
-void debug(int v1, const char* v2);
-void debug(const char* v1, const char* v2);
-
-// 三参数调试函数
-void debug(int v1, int v2, int v3);
-void debug(const std::string& v1, int v2, int v3);
-void debug(int v1, const std::string& v2, int v3);
-void debug(int v1, int v2, const std::string& v3);
-
-// 四参数调试函数
-void debug(int v1, int v2, int v3, int v4);
-void debug(const std::string& v1, int v2, int v3, int v4);
-#endif // DEBUG
-
-// 单参数信息函数
-#ifdef INFO
-void info(int value);
-void info(long value);
-void info(long long value);
-void info(unsigned int value);
-void info(unsigned long value);
-void info(unsigned long long value);
-void info(float value);
-void info(double value);
-void info(bool value);
-void info(char value);
-void info(const char* value);
-void info(const std::string& value);
-void info(const std::vector<int>& vec);
-void info(const std::vector<std::string>& vec);
-void info(const std::vector<double>& vec);
-void info(const std::vector<bool>& vec);
-void info(const std::vector<char>& vec);
-void info(const std::map<int, int>& m);
-void info(const std::map<std::string, int>& m);
-void info(const std::map<int, std::string>& m);
-void info(const std::map<std::string, std::string>& m);
-void info(const std::set<int>& s);
-void info(const std::set<std::string>& s);
-
-// 双参数信息函数
-void info(int v1, int v2);
-void info(const std::string& v1, int v2);
-void info(int v1, const std::string& v2);
-void info(const std::string& v1, const std::string& v2);
-void info(const char* v1, int v2);
-void info(int v1, const char* v2);
-void info(const char* v1, const char* v2);
-
-// 三参数信息函数
-void info(int v1, int v2, int v3);
-void info(const std::string& v1, int v2, int v3);
-void info(int v1, const std::string& v2, int v3);
-void info(int v1, int v2, const std::string& v3);
-
-// 四参数信息函数
-void info(int v1, int v2, int v3, int v4);
-void info(const std::string& v1, int v2, int v3, int v4);
-#endif // INFO
-
-// 清空日志文件
-#ifdef DEBUG
-void clear_debug();
-#endif // DEBUG
-
-#ifdef INFO
-void clear_info();
-#endif // INFO
-
-// 初始化函数，清空所有日志
-void init_logs();
-
-
-
-
-
