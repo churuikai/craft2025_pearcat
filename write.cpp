@@ -86,55 +86,119 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
     // 数据区交替写入进行
     std::vector<int> op_list = op_start % 2 == 0 ? std::vector<int>{0, 1} : std::vector<int>{1, 0};
 
-    for (int tag_ : tag_list)
-    {
-        if (space.size() == 3 - BACK_NUM) break;
-        if ((!IS_INTERVAL_REVERSE and tag_ == -1) or tag_ == 0) continue;
-        for (int size_ : size_list)
+
+    // 先寻找能够匹配空闲块大小的的同tag区域
+
+        // 先尝试在相同tag和size的分区中寻找能够精确匹配空闲块大小的区域
+        for (int size_ : size_list) 
         {
-            if (space.size() == 3 - BACK_NUM) break;
-            if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0) continue;
-            for (int i = 1 + disk_start; i <= N + disk_start; ++i)
+            if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+            if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0) continue;  // 跳过不符合条件的size
+            
+            // 遍历所有磁盘
+            for (int i = 1 + disk_start; i <= N + disk_start; ++i) 
             {
-                int disk_id = (i - 1) % N + 1;
-                // 检查磁盘是否已经在space中
-                if (space.size() == 3 - BACK_NUM) break;
+                int disk_id = (i - 1) % N + 1;  // 计算实际的磁盘ID
+                if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+                // 检查该磁盘是否已经被选中
                 if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p) { return p.first == disk_id; })) continue;
-                tag_ = tag_ == -1 ? DISKS[disk_id].tag_reverse[tag] : tag_;
-                // for(auto& part : DISKS[disk_id].get_parts(tag_, size_))
-                for (int part_idx : op_list)
+
+                // 按照操作列表顺序遍历数据区
+                for (int part_idx : op_list) 
                 {
-                    auto &parts = DISKS[disk_id].get_parts(tag_, size_);
-                    if (parts.size() == 0) continue;
-                    Part &part = parts[part_idx];
-                    if (part.free_cells >= obj_size)
+                    if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+                    auto& parts = DISKS[disk_id].get_parts(tag, size_);  // 获取指定tag和size的分区列表
+                    
+                    // 遍历分区
+                    for (auto& part : parts) 
                     {
-                        space.push_back({disk_id, &part});
-                        if (space.size() == 3 - BACK_NUM) break;
+                        if (part.free_cells < obj_size) continue;  // 如果空闲单元不足，则跳过
+                        
+                        // 在空闲块链表中查找大小恰好等于obj_size的块
+                        FreeBlock* current = part.free_list_head;
+                        while (current != nullptr) 
+                        {
+                            // 找到大小恰好匹配的空闲块
+                            if (current->end - current->start + 1 == obj_size) 
+                            {
+                                space.push_back({disk_id, &part});
+                                break;
+                            }
+                            current = current->next;
+                        }
+                        if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
                     }
                 }
             }
         }
-    }
+    
+        // 如果上面没有找到足够的空间，则尝试在不同tag或size的分区中寻找
+        for (int tag_ : tag_list)
+        {
+            if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+            if ((!IS_INTERVAL_REVERSE and tag_ == -1) or tag_ == 0) continue;  // 跳过不符合条件的tag
+            
+            // 遍历所有可能的size
+            for (int size_ : size_list)
+            {
+                if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+                if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0) continue;  // 跳过不符合条件的size
+                
+                // 遍历所有磁盘
+                for (int i = 1 + disk_start; i <= N + disk_start; ++i)
+                {
+                    int disk_id = (i - 1) % N + 1;  // 计算实际的磁盘ID
+                    if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+                    
+                    // 检查该磁盘是否已经被选中
+                    if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p) { return p.first == disk_id; })) continue;
+                    
+                    // 处理反向tag的情况
+                    tag_ = tag_ == -1 ? DISKS[disk_id].tag_reverse[tag] : tag_;
+                    
+                    // 按照操作列表顺序遍历数据区
+                    for (int part_idx : op_list)
+                    {
+                        auto &parts = DISKS[disk_id].get_parts(tag_, size_);
+                        if (parts.size() == 0) continue;  // 如果没有对应的分区，则跳过
+                        
+                        Part &part = parts[part_idx];
+                        // 如果分区有足够的空闲空间
+                        if (part.free_cells >= obj_size)
+                        {
+                            space.push_back({disk_id, &part});
+                            if (space.size() == 3 - BACK_NUM) break;  // 如果已经找到足够的空间，则退出
+                        }
+                    }
+                }
+            }
+        }
 
-    assert(space.size() == 3 - BACK_NUM && "数据区域磁盘空间不足");
+    assert(space.size() == 3 - BACK_NUM);
 
-    // 寻找备份区
+    // 寻找备份区域：在剩余磁盘中寻找有足够空间的备份区
     for (int i = 1 + disk_start; i <= N + disk_start; ++i)
     {
-        if (space.size() == 3)
-            break;
+        // 如果已经找到所有需要的空间，则退出循环
+        if (space.size() == 3) break;
+        
+        // 计算实际的磁盘ID（循环使用磁盘）
         int disk_id = (i - 1) % N + 1;
-        if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p)
-                        { return p.first == disk_id; }))
+        
+        // 跳过已经被选中的磁盘
+        if (std::any_of(space.begin(), space.end(), 
+                        [disk_id](const auto &p) { return p.first == disk_id; }))
             continue;
+        
+        // 检查备份区(tag=0, size=0)是否有足够的空闲空间
         if (DISKS[disk_id].get_parts(0, 0)[0].free_cells >= obj_size)
         {
+            // 将该备份区添加到选中空间列表中
             space.push_back({disk_id, &DISKS[disk_id].get_parts(0, 0)[0]});
         }
     }
 
-    assert(space.size() == 3 && "备份区磁盘空间不足");
+    assert(space.size() == 3);
     return space;
 }
 
@@ -178,24 +242,57 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag,
 {
     if (IS_INTERVAL_REVERSE)
     {
-        // 同tag同向，不同tag反向
-        int pointer = (tag == part->tag) ? part->start : part->end;
+        // 判断是否反向写入
+        bool is_reverse = tag == part->tag ? part->start > part->end : part->start < part->end;
+        int start = std::min(part->start, part->end);
+        int end = std::max(part->start, part->end);
+        // 优先寻找最合适的空闲单元
+        int pointer = 0;
+        int min_diff = 99999;
+        int count = 0;
+        if(is_reverse) {
+            // 通过链表找最合适的匹配
+            FreeBlock *current = part->free_list_tail;
+            while(current != nullptr) {
+                if(current->end - current->start + 1 >= units.size()) {
+                    int diff = current->end-current->start+1-units.size();
+                    if(diff < min_diff) {
+                        min_diff = diff;
+                        pointer = current->end;
+                    }
+                    if (tag!=part->tag or count > 5) break;
+                }
+                current = current->prev;
+                count++;
+            }
+        }
+        else {
+            // 通过链表找最合适的匹配
+            FreeBlock *current = part->free_list_head;
+            while(current != nullptr) {
+                if(current->end - current->start + 1 >= units.size()) {
+                    int diff = current->end-current->start+1-units.size();
+                    if(diff < min_diff) {
+                        min_diff = diff;
+                        pointer = current->start;
+                    }
+                    if (tag!=part->tag or count > 5) break;
+                }
+                current = current->next;
+                count++;
+            }
+        }
+        if(pointer == 0) {
+            pointer = is_reverse ? end : start;
+        }
+
         std::vector<int> result;
         for (int unit_id : units)
         {
             while (cells[pointer]->obj_id != 0)
             {
-                if (tag == part->tag)
-                {
-                    pointer = part->start < part->end ? pointer + 1 : pointer - 1;
-                }
-                else
-                {
-                    pointer = part->start > part->end ? pointer + 1 : pointer - 1;
-                }
+                pointer = is_reverse ? pointer - 1 : pointer + 1;
             }
-            // 确保目标单元确实是空闲的
-            assert(cells[pointer]->obj_id == 0 && "尝试写入已被占用的单元");
             
             cells[pointer]->obj_id = obj_id;
             cells[pointer]->unit_id = unit_id;
@@ -204,12 +301,9 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag,
             
             // 更新空闲块链表（只更新非备份区的分区）
             if (part->tag != 0) {
-                // 确保无论分区方向如何，都正确更新空闲块链表
                 part->allocate_block(pointer);
             }
-            
             result.push_back(pointer);
-            // pointer = pointer == part[1] ? part[0] : pointer % size + 1;
         }
         return result;
     }
