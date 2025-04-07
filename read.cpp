@@ -75,8 +75,8 @@ void Controller::add_req(int req_id, int obj_id)
                     int next_cell_idx = cell_idx;
                     for(int k = 0; k < 6; ++k)
                     {
-                        prev_cell_idx = prev_cell_idx == 1 ? size : prev_cell_idx - 1;
-                        next_cell_idx = next_cell_idx == size ? 1 : next_cell_idx + 1;
+                        prev_cell_idx = prev_cell_idx == 1 ? prev_cell_idx : prev_cell_idx - 1;
+                        next_cell_idx = next_cell_idx == size ? next_cell_idx : next_cell_idx + 1;
                         if(this->DISKS[disk_id].cells[prev_cell_idx]->req_ids.size() > 0 or this->DISKS[disk_id].cells[next_cell_idx]->req_ids.size() > 0)
                         {
                             is_alone = false;
