@@ -88,38 +88,29 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
 
     for (int tag_ : tag_list)
     {
-        if (space.size() == 3 - BACK_NUM)
-            break;
-        if ((!IS_INTERVAL_REVERSE and tag_ == -1) or tag_ == 0)
-            continue;
+        if (space.size() == 3 - BACK_NUM) break;
+        if ((!IS_INTERVAL_REVERSE and tag_ == -1) or tag_ == 0) continue;
         for (int size_ : size_list)
         {
-            if (space.size() == 3 - BACK_NUM)
-                break;
-            if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0)
-                continue;
+            if (space.size() == 3 - BACK_NUM) break;
+            if ((!IS_PART_BY_SIZE and size_ != 1) or size_ == 0) continue;
             for (int i = 1 + disk_start; i <= N + disk_start; ++i)
             {
                 int disk_id = (i - 1) % N + 1;
                 // 检查磁盘是否已经在space中
-                if (space.size() == 3 - BACK_NUM)
-                    break;
-                if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p)
-                                { return p.first == disk_id; }))
-                    continue;
+                if (space.size() == 3 - BACK_NUM) break;
+                if (std::any_of(space.begin(), space.end(), [disk_id](const auto &p) { return p.first == disk_id; })) continue;
                 tag_ = tag_ == -1 ? DISKS[disk_id].tag_reverse[tag] : tag_;
                 // for(auto& part : DISKS[disk_id].get_parts(tag_, size_))
                 for (int part_idx : op_list)
                 {
                     auto &parts = DISKS[disk_id].get_parts(tag_, size_);
-                    if (parts.size() == 0)
-                        continue;
+                    if (parts.size() == 0) continue;
                     Part &part = parts[part_idx];
                     if (part.free_cells >= obj_size)
                     {
                         space.push_back({disk_id, &part});
-                        if (space.size() == 3 - BACK_NUM)
-                            break;
+                        if (space.size() == 3 - BACK_NUM) break;
                     }
                 }
             }

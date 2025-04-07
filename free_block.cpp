@@ -18,6 +18,7 @@ void Part::init_free_list() {
     int max_pos = std::max(start, end);
     
     free_list_head = new FreeBlock(min_pos, max_pos);
+    free_list_tail = free_list_head;
 }
 
 // 分配一个位置（将位置标记为已使用）
@@ -113,6 +114,7 @@ void Part::insert_free_block(int start_pos, int end_pos) {
     // 如果链表为空，直接插入
     if (free_list_head == nullptr) {
         free_list_head = new_block;
+        free_list_tail = new_block;
         return;
     }
     
@@ -141,6 +143,9 @@ void Part::insert_free_block(int start_pos, int end_pos) {
         prev->next = new_block;
         if (current != nullptr) {
             current->prev = new_block;
+        } else {
+            // 如果current为nullptr，说明是在尾部插入
+            free_list_tail = new_block;
         }
     }
     
@@ -163,6 +168,9 @@ void Part::remove_free_block(FreeBlock* block) {
     
     if (block->next != nullptr) {
         block->next->prev = block->prev;
+    } else {
+        // 如果是尾节点，更新尾指针
+        free_list_tail = block->prev;
     }
     
     // 释放内存
@@ -187,6 +195,9 @@ void Part::merge_adjacent_blocks(FreeBlock* block) {
         prev_block->next = block->next;
         if (block->next != nullptr) {
             block->next->prev = prev_block;
+        } else {
+            // 如果合并的是尾部块，更新尾指针
+            free_list_tail = prev_block;
         }
         
         // 递归检查是否还能继续合并
@@ -210,6 +221,9 @@ void Part::merge_adjacent_blocks(FreeBlock* block) {
         block->next = next_block->next;
         if (next_block->next != nullptr) {
             next_block->next->prev = block;
+        } else {
+            // 如果合并的是尾部块，更新尾指针
+            free_list_tail = block;
         }
         
         // 递归检查是否还能继续合并
@@ -231,6 +245,7 @@ void Part::clear_free_list() {
         current = next;
     }
     free_list_head = nullptr;
+    free_list_tail = nullptr;
 } 
 
 // 验证链表函数实现

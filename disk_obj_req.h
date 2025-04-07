@@ -50,10 +50,11 @@ struct Part
     int tag;
     int size;
     FreeBlock* free_list_head;  // 空闲块链表头指针
+    FreeBlock* free_list_tail;  // 空闲块链表尾指针
 
-    Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0), free_list_head(nullptr) {}
+    Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0), free_list_head(nullptr), free_list_tail(nullptr) {}
     Part(int start, int end, int free_cells, int last_write_pos, int tag, int size) : 
-    start(start), end(end), free_cells(free_cells), last_write_pos(last_write_pos), tag(tag), size(size), free_list_head(nullptr) {}
+    start(start), end(end), free_cells(free_cells), last_write_pos(last_write_pos), tag(tag), size(size), free_list_head(nullptr), free_list_tail(nullptr) {}
 
     // 初始化空闲块链表
     void init_free_list();
