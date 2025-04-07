@@ -8,9 +8,10 @@
 #include <sstream>
 #include <type_traits>
 #include <iterator>
+#include <filesystem>  // C++17 filesystem support
 
 // SFINAE helper: detects if a type T is iterable (has std::begin/end),
-// but we explicitly exclude std::string so that it is printed as a normal type.
+// but explicitly excludes std::string.
 template <typename T, typename = void>
 struct is_iterable : std::false_type {};
 
@@ -23,7 +24,7 @@ struct is_iterable<T, std::void_t<
 template <typename T>
 constexpr bool is_iterable_v = is_iterable<T>::value;
 
-// Default file name prefixes and suffixes. These will be combined with a run-specific timestamp.
+// Default file name prefixes and suffixes.
 #ifndef DEFAULT_DEBUG_FILE_PREFIX
 #define DEFAULT_DEBUG_FILE_PREFIX "log_"
 #endif
@@ -40,9 +41,8 @@ constexpr bool is_iterable_v = is_iterable<T>::value;
 #define DEFAULT_INFO_FILE_SUFFIX ".txt"
 #endif
 
-// Logger class: a singleton that handles logging with thread safety,
-// timestamped entries, unique file names per run, and support for printing
-// iterable containers.
+// Logger class: singleton that handles thread-safe logging with
+// timestamped entries, new files per run, and support for printing iterable containers.
 class Logger {
 public:
     static Logger& instance() {
@@ -50,7 +50,7 @@ public:
         return instance;
     }
     
-    // Initialize logs: generate new log file names and clear the files.
+    // Initialize logs: creates the "log" folder (if needed), generates new file names, and clears them.
     void init_logs() {
         std::lock_guard<std::mutex> lock(mutex_);
         generate_file_names();
@@ -97,7 +97,7 @@ private:
     std::string debug_file_name_;
     std::string info_file_name_;
     
-    // Returns a human-readable timestamp for log entries.
+    // Returns a human-readable timestamp.
     std::string timestamp() {
         auto now = std::chrono::system_clock::now();
         std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -114,7 +114,7 @@ private:
 #endif
     }
     
-    // Generates a filename-friendly timestamp (e.g. "20250407_123456").
+    // Returns a filename-friendly timestamp (e.g. "20250407_123456").
     std::string file_timestamp() {
         auto now = std::chrono::system_clock::now();
         std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -129,10 +129,11 @@ private:
         return std::string(buf);
     }
     
-    // Generate new file names for this run based on the current timestamp.
+    // Generate new file names for this run and ensure the "log" folder exists.
     void generate_file_names() {
-        debug_file_name_ = std::string(DEFAULT_DEBUG_FILE_PREFIX) + file_timestamp() + DEFAULT_DEBUG_FILE_SUFFIX;
-        info_file_name_ = std::string(DEFAULT_INFO_FILE_PREFIX) + file_timestamp() + DEFAULT_INFO_FILE_SUFFIX;
+        std::filesystem::create_directories("log");
+        debug_file_name_ = std::string("log/") + DEFAULT_DEBUG_FILE_PREFIX + file_timestamp() + DEFAULT_DEBUG_FILE_SUFFIX;
+        info_file_name_  = std::string("log/") + DEFAULT_INFO_FILE_PREFIX + file_timestamp() + DEFAULT_INFO_FILE_SUFFIX;
     }
     
     // Base case: no arguments.
@@ -175,7 +176,7 @@ private:
 
 // -- Public interface functions --
 
-// Clears logs and creates new log/info files for this run.
+// Clears logs and creates new log/info files in the "log" folder.
 inline void init_logs() {
     Logger::instance().init_logs();
 }

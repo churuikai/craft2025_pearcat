@@ -4,6 +4,7 @@ code_craft.exe
 
 # 日志文件
 *.log
+/log/
 log.txt
 info.txt
 debug.txt
