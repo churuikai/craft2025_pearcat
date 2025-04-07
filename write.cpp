@@ -246,63 +246,64 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag,
         bool is_reverse = tag == part->tag ? part->start > part->end : part->start < part->end;
         int start = std::min(part->start, part->end);
         int end = std::max(part->start, part->end);
+        
         // 优先寻找最合适的空闲单元
         int pointer = 0;
         int min_diff = 99999;
-        int count = 0;
-        if(is_reverse) {
-            // 通过链表找最合适的匹配
-            FreeBlock *current = part->free_list_tail;
-            while(current != nullptr) {
-                if(current->end - current->start + 1 >= units.size()) {
-                    int diff = current->end-current->start+1-units.size();
-                    if(diff < min_diff) {
+        
+        // 如果是非备份区且标签匹配，尝试找到最合适的空闲块
+        if (part->tag == tag && part->tag != 0)
+        {
+            // 通过链表找最合适的匹配（尽量减少碎片）
+            FreeBlock *current = is_reverse ? part->free_list_tail : part->free_list_head;
+            while (current != nullptr) 
+            {
+                // 检查空闲块是否足够大
+                if (current->end - current->start + 1 >= units.size()) 
+                {
+                    int diff = current->end - current->start + 1 - units.size();
+                    // 选择浪费空间最少的空闲块
+                    if (diff < min_diff) 
+                    {
                         min_diff = diff;
-                        pointer = current->end;
+                        pointer = is_reverse ? current->end : current->start;
                     }
-                    if (tag!=part->tag or count > 5) break;
                 }
-                current = current->prev;
-                count++;
+                current = is_reverse ? current->prev : current->next;
             }
         }
-        else {
-            // 通过链表找最合适的匹配
-            FreeBlock *current = part->free_list_head;
-            while(current != nullptr) {
-                if(current->end - current->start + 1 >= units.size()) {
-                    int diff = current->end-current->start+1-units.size();
-                    if(diff < min_diff) {
-                        min_diff = diff;
-                        pointer = current->start;
-                    }
-                    if (tag!=part->tag or count > 5) break;
-                }
-                current = current->next;
-                count++;
-            }
-        }
-        if(pointer == 0) {
+        
+        // 如果没找到合适的空闲块，从分区的起始或结束位置开始
+        if (pointer == 0) 
+        {
             pointer = is_reverse ? end : start;
         }
 
         std::vector<int> result;
+        // 为每个单元寻找存储位置
         for (int unit_id : units)
         {
+            // 寻找空闲单元
             while (cells[pointer]->obj_id != 0)
             {
-                pointer = is_reverse ? pointer - 1 : pointer + 1;
+                // 循环查找空闲单元
+                // pointer = is_reverse ?  pointer == start ? end : pointer - 1 :
+                //                         pointer == end ? start : pointer + 1; // 向前或向后移动
+                pointer = is_reverse ?  pointer - 1 : pointer + 1; // 向前或向后移动
             }
             
+            // 写入数据
             cells[pointer]->obj_id = obj_id;
             cells[pointer]->unit_id = unit_id;
             cells[pointer]->tag = tag;
             part->free_cells--;
             
             // 更新空闲块链表（只更新非备份区的分区）
-            if (part->tag != 0) {
+            if (part->tag != 0) 
+            {
                 part->allocate_block(pointer);
             }
+            
             result.push_back(pointer);
         }
         return result;
