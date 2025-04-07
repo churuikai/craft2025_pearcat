@@ -13,6 +13,7 @@ class Object;
 class Req;
 struct Part;
 struct Cell;
+struct FreeBlock;
 
 
 // 磁盘点
@@ -29,6 +30,16 @@ struct Cell
 
 };
 
+// 空闲块结构
+struct FreeBlock {
+    int start;          // 空闲块起始位置
+    int end;            // 空闲块结束位置
+    FreeBlock* prev;    // 前一个空闲块
+    FreeBlock* next;    // 后一个空闲块
+    
+    FreeBlock(int s, int e) : start(s), end(e), prev(nullptr), next(nullptr) {}
+};
+
 // 分区
 struct Part
 {
@@ -38,9 +49,45 @@ struct Part
     int last_write_pos;
     int tag;
     int size;
-    Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0) {}
+    FreeBlock* free_list_head;  // 空闲块链表头指针
+
+    Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0), free_list_head(nullptr) {}
     Part(int start, int end, int free_cells, int last_write_pos, int tag, int size) : 
-    start(start), end(end), free_cells(free_cells), last_write_pos(last_write_pos), tag(tag), size(size) {}
+    start(start), end(end), free_cells(free_cells), last_write_pos(last_write_pos), tag(tag), size(size), free_list_head(nullptr) {}
+
+    // 初始化空闲块链表
+    void init_free_list();
+    
+    // 在链表中插入一个新的空闲块
+    void insert_free_block(int start_pos, int end_pos);
+    
+    // 从链表中移除一个空闲块
+    void remove_free_block(FreeBlock* block);
+    
+    // 合并相邻的空闲块
+    void merge_adjacent_blocks(FreeBlock* block);
+    
+    // 分配空闲块（仅用于维护链表，不影响原有逻辑）
+    void allocate_block(int pos);
+    
+    // 释放块（标记为空闲，并更新链表）
+    void free_block(int pos);
+    
+    // 清理空闲块链表（释放内存）
+    void clear_free_list();
+    
+    // 验证链表函数
+    // 验证空闲块链表是否与实际空闲单元一致
+    int verify_free_list_consistency(Disk* disk);
+    
+    // 验证空闲块链表的连接性和排序
+    int verify_free_list_integrity();
+    
+    // 打印空闲块链表信息
+    void print_free_list_info();
+    
+    // 获取空闲块链表的统计信息
+    void get_free_list_stats(int& total_blocks, int& max_block_size, int& min_block_size, double& avg_block_size, int& fragmentation_count);
 };
 
 // 磁盘

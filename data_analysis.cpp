@@ -1,8 +1,12 @@
 #include "constants.h"
 #include "data_analysis.h"
 #include "debug.h"
+#include "controller.h"
+#include "disk_obj_req.h"
 #include <cmath>
 #include <algorithm>
+#include <climits>
+#include <numeric>
 // 定义细粒度的频率数据结构
 std::vector<std::vector<std::vector<int>>> FRE;
 const int FINE_GRANULARITY = 1800;                    // 细粒度为100时间片，实验表明细粒度效果更差。。。
@@ -231,4 +235,239 @@ double __compute_similarity(const std::vector<double> &curve1, const std::vector
     return 1.0 - cosine_similarity;
 }
 
+// 获取磁盘的统计信息
+DiskStatsInfo Controller::get_disk_stats(int disk_id) {
+    DiskStatsInfo stats;
+    stats.total_blocks = 0;
+    stats.max_block_size = 0;
+    stats.min_block_size = INT_MAX;
+    stats.avg_block_size = 0;
+    stats.fragmentation_count = 0;
+    
+    Disk &disk = DISKS[disk_id];
+    
+    std::vector<int> block_sizes; // 用于存储所有块的大小
+    
+    // 遍历所有正常分区
+    for (int tag = 1; tag <= M; tag++) {
+        for (int size = 1; size <= 5; size++) {
+            for (const auto &part : disk.get_parts(tag, size)) {
+                // 创建新的分区统计信息
+                PartStatsInfo part_stats;
+                part_stats.tag = tag;
+                part_stats.size = size;
+                
+                std::vector<int> part_block_sizes; // 该分区的块大小
+                
+                FreeBlock *current = part.free_list_head;
+                while (current != nullptr) {
+                    int block_size = current->end - current->start + 1;
+                    part_stats.total_blocks++;
+                    part_block_sizes.push_back(block_size);
+                    
+                    // 更新分区统计的最大最小值
+                    part_stats.max_block_size = std::max(part_stats.max_block_size, block_size);
+                    part_stats.min_block_size = std::min(part_stats.min_block_size, block_size);
+                    
+                    // 更新分区碎片大小分布
+                    part_stats.fragment_size_distribution[block_size]++;
+                    
+                    // 更新整个磁盘的统计信息
+                    stats.total_blocks++;
+                    block_sizes.push_back(block_size);
+                    stats.max_block_size = std::max(stats.max_block_size, block_size);
+                    stats.min_block_size = std::min(stats.min_block_size, block_size);
+                    stats.fragment_size_distribution[block_size]++;
+                    
+                    if (current->next != nullptr) {
+                        // 如果当前块与下一个块不连续，增加碎片计数
+                        if (current->end + 1 < current->next->start) {
+                            part_stats.fragmentation_count++;
+                            stats.fragmentation_count++;
+                        }
+                    }
+                    
+                    current = current->next;
+                }
+                
+                // 计算分区的平均值，忽略最大值
+                if (part_stats.total_blocks > 1) {
+                    // 移除最大值
+                    int max_size = part_stats.max_block_size;
+                    auto it = std::find(part_block_sizes.begin(), part_block_sizes.end(), max_size);
+                    if (it != part_block_sizes.end()) {
+                        part_block_sizes.erase(it);
+                        
+                        // 计算剩余块的平均大小
+                        double sum = std::accumulate(part_block_sizes.begin(), part_block_sizes.end(), 0.0);
+                        part_stats.avg_block_size = sum / part_block_sizes.size();
+                    }
+                } else if (part_stats.total_blocks == 1) {
+                    // 只有一个块时，平均值就是该块的大小
+                    part_stats.avg_block_size = part_block_sizes[0];
+                }
+                
+                // 只有当分区有空闲块时才添加到统计中
+                if (part_stats.total_blocks > 0) {
+                    stats.part_stats[tag].push_back(part_stats);
+                }
+            }
+        }
+    }
+    
+    // 统计冗余区
+    for (const auto &part : disk.get_parts(17, 1)) {
+        // 创建新的分区统计信息
+        PartStatsInfo part_stats;
+        part_stats.tag = 17; // 冗余区标签
+        part_stats.size = 1;
+        
+        std::vector<int> part_block_sizes; // 该分区的块大小
+        
+        FreeBlock *current = part.free_list_head;
+        while (current != nullptr) {
+            int block_size = current->end - current->start + 1;
+            part_stats.total_blocks++;
+            part_block_sizes.push_back(block_size);
+            
+            // 更新分区统计的最大最小值
+            part_stats.max_block_size = std::max(part_stats.max_block_size, block_size);
+            part_stats.min_block_size = std::min(part_stats.min_block_size, block_size);
+            
+            // 更新分区碎片大小分布
+            part_stats.fragment_size_distribution[block_size]++;
+            
+            // 更新整个磁盘的统计信息
+            stats.total_blocks++;
+            block_sizes.push_back(block_size);
+            stats.max_block_size = std::max(stats.max_block_size, block_size);
+            stats.min_block_size = std::min(stats.min_block_size, block_size);
+            stats.fragment_size_distribution[block_size]++;
+            
+            if (current->next != nullptr) {
+                // 如果当前块与下一个块不连续，增加碎片计数
+                if (current->end + 1 < current->next->start) {
+                    part_stats.fragmentation_count++;
+                    stats.fragmentation_count++;
+                }
+            }
+            
+            current = current->next;
+        }
+        
+        // 计算分区的平均值，忽略最大值
+        if (part_stats.total_blocks > 1) {
+            // 移除最大值
+            int max_size = part_stats.max_block_size;
+            auto it = std::find(part_block_sizes.begin(), part_block_sizes.end(), max_size);
+            if (it != part_block_sizes.end()) {
+                part_block_sizes.erase(it);
+                
+                // 计算剩余块的平均大小
+                double sum = std::accumulate(part_block_sizes.begin(), part_block_sizes.end(), 0.0);
+                part_stats.avg_block_size = sum / part_block_sizes.size();
+            }
+        } else if (part_stats.total_blocks == 1) {
+            // 只有一个块时，平均值就是该块的大小
+            part_stats.avg_block_size = part_block_sizes[0];
+        }
+        
+        // 只有当分区有空闲块时才添加到统计中
+        if (part_stats.total_blocks > 0) {
+            stats.part_stats[17].push_back(part_stats);
+        }
+    }
+    
+    // 计算整个磁盘的平均值，忽略最大值
+    if (stats.total_blocks > 1) {
+        // 移除最大值
+        int max_size = stats.max_block_size;
+        auto it = std::find(block_sizes.begin(), block_sizes.end(), max_size);
+        if (it != block_sizes.end()) {
+            block_sizes.erase(it);
+            
+            // 计算剩余块的平均大小
+            double sum = std::accumulate(block_sizes.begin(), block_sizes.end(), 0.0);
+            stats.avg_block_size = sum / block_sizes.size();
+        }
+    } else if (stats.total_blocks == 1) {
+        // 只有一个块时，平均值就是该块的大小
+        stats.avg_block_size = block_sizes[0];
+    }
+    
+    return stats;
+}
+
+void process_verify(Controller &controller) {
+    // 验证所有磁盘
+    int total_inconsistencies = 0;
+    for (int disk_id = 1; disk_id <= N; disk_id++) {
+        Disk &disk = controller.DISKS[disk_id];
+   
+        int disk_inconsistencies = 0;
+        
+        // 遍历所有分区（除备份区外）
+        for (int tag = 1; tag <= M; tag++) {
+            for (int size = 1; size <= 5; size++) {
+                for (auto &part : disk.get_parts(tag, size)) {
+                    // 使用新的验证函数
+                    disk_inconsistencies += part.verify_free_list_consistency(&disk);
+                    disk_inconsistencies += part.verify_free_list_integrity();
+                }
+            }
+        }
+        
+        // 检查冗余区
+        for (auto &part : disk.get_parts(17, 1)) {
+            disk_inconsistencies += part.verify_free_list_consistency(&disk);
+            disk_inconsistencies += part.verify_free_list_integrity();
+        }
+        
+        if (disk_inconsistencies > 0) {
+            info("磁盘", disk_id, "存在", disk_inconsistencies, "处链表不一致");
+            assert(false);
+        }
+        total_inconsistencies += disk_inconsistencies;
+    }
+
+    // 输出详细统计信息
+    info("=============================================================");
+    info("TIME: ", controller.timestamp, " 磁盘碎片信息...(只输出前1个)");
+    info("=============================================================");
+    
+    for (int disk_id = 1; disk_id <= 1; disk_id++) {
+        // 使用新的磁盘统计函数
+        DiskStatsInfo stats = controller.get_disk_stats(disk_id);
+        
+        info("======================== 磁盘", disk_id, "统计信息 ========================");
+        
+        // 按标签输出每个分区的信息
+        for (int tag = 1; tag <= 17; tag++) {
+            if(tag > M && tag != 17) continue;
+            // 如果该标签下有分区统计信息
+            if (stats.part_stats.find(tag) != stats.part_stats.end() && !stats.part_stats[tag].empty()) {
+      
+                for (const auto& part_stats : stats.part_stats[tag]) {
+                    // 输出基本信息
+                    std::stringstream ss;
+                    ss << "tag:" << tag << " size:" << part_stats.size 
+                       << " 平均(去最大):" << std::fixed << std::setprecision(2) << part_stats.avg_block_size
+                       << " 最大:" << part_stats.max_block_size
+                       << " 最小:" << part_stats.min_block_size
+                       << " 碎片数:" << part_stats.fragmentation_count;
+          
+                    // 统计碎片大小1-10的具体数量
+                    std::stringstream ss_small;
+                    ss_small << "小碎片分布(1-5): ";
+                    for (int size = 1; size <= 5; size++) {
+                        int count = part_stats.fragment_size_distribution.count(size) > 0 ? 
+                                    part_stats.fragment_size_distribution.at(size) : 0;
+                        ss_small << size << "：" << count << " ";
+                    }
+                    info(tag, ss.str(), ss_small.str());
+                }
+            }
+        }
+    }
+}
 

@@ -1,6 +1,15 @@
+#pragma once
 #include <vector>
+#include <map>
+#include <unordered_map>
+#include "controller.h"
 
 extern std::vector<std::vector<std::vector<int>>> FRE;
+class Controller;
+
+
+
+
 
 // 函数声明
 // 频率相关函数声明
@@ -11,6 +20,9 @@ void process_data_analysis();
 
 // 计算标签顺序
 void compute_tag_order();
+
+// 获取磁盘的统计信息
+void process_verify(Controller &controller);
 
 // 辅助函数
 std::vector<double> __normalize_curve(const std::vector<double> &curve);

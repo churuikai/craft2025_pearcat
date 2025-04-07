@@ -203,10 +203,20 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag,
                     pointer = part->start > part->end ? pointer + 1 : pointer - 1;
                 }
             }
+            // 确保目标单元确实是空闲的
+            assert(cells[pointer]->obj_id == 0 && "尝试写入已被占用的单元");
+            
             cells[pointer]->obj_id = obj_id;
             cells[pointer]->unit_id = unit_id;
             cells[pointer]->tag = tag;
             part->free_cells--;
+            
+            // 更新空闲块链表（只更新非备份区的分区）
+            if (part->tag != 0) {
+                // 确保无论分区方向如何，都正确更新空闲块链表
+                part->allocate_block(pointer);
+            }
+            
             result.push_back(pointer);
             // pointer = pointer == part[1] ? part[0] : pointer % size + 1;
         }
@@ -224,10 +234,19 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag,
         }
         // assert(pointer <= part[1] && "分区空间不足");
         Cell *cell = cells[pointer];
+        // 确保目标单元确实是空闲的
+        assert(cell->obj_id == 0 && "尝试写入已被占用的单元");
+        
         cell->obj_id = obj_id;
         cell->unit_id = unit_id;
         cell->tag = tag;
         part->free_cells--;
+        
+        // 更新空闲块链表（只更新非备份区的分区）
+        if (part->tag != 0) {
+            part->allocate_block(pointer);
+        }
+        
         result.push_back(pointer);
         pointer = pointer == part->end ? part->start : pointer % size + 1;
     }

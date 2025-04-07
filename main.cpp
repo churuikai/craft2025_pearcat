@@ -53,6 +53,10 @@ int main() {
             process_gc(controller);
         }
 
+        // 验证数据结构
+        if (timestamp % 10000 == 0) {
+            process_verify(controller);
+        }
     }
 
     info("=============================================================");

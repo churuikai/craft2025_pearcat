@@ -266,12 +266,38 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             std::swap(part.start, part.end);
         }
     }
+    
+    // 初始化所有分区的空闲块链表（除备份区外）
+    for (int tag : tag_order) {
+        for (int size = 1; size <= 5; ++size) {
+            for (auto& part : get_parts(tag, size)) {
+                if (part.free_cells > 0) {
+                    part.init_free_list();
+                }
+            }
+        }
+    }
+    
+    // 初始化冗余区的空闲块链表
+    for (auto& part : get_parts(17, 1)) {
+        if (part.free_cells > 0) {
+            part.init_free_list();
+        }
+    }
 }
 
 // 添加Disk析构函数实现
 Disk::~Disk() {
+    // 清理所有分区的空闲块链表
+    for (auto& tag_parts : part_tables) {
+        for (auto& part : tag_parts) {
+            part.clear_free_list();
+        }
+    }
+    
+    // 释放cells内存
     if (cells) {
-        for (int i = 0; i < MAX_DISK_SIZE; i++) {
+        for (int i = 1; i <= size; i++) {
             delete cells[i];
         }
         delete[] cells;
