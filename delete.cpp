@@ -58,6 +58,10 @@ std::vector<int> Controller::delete_obj(int obj_id)
         activate_reqs.erase(req_id);
     }
     OBJECTS[obj_id].req_ids.clear();
+    OBJECTS[obj_id].id = 0;
+    OBJECTS[obj_id].replicas.clear();
+    OBJECTS[obj_id].size = 0;
+    OBJECTS[obj_id].tag = 0;
     return aborted_requests;
 }
 

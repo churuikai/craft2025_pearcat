@@ -11,7 +11,7 @@ class Controller;
 class Disk;
 class Object;
 class Req;
-struct Part;
+class Part;
 struct Cell;
 struct FreeBlock;
 
@@ -41,8 +41,9 @@ struct FreeBlock {
 };
 
 // 分区
-struct Part
+class Part
 {
+public:
     int start;
     int end;
     int free_cells;
@@ -52,6 +53,9 @@ struct Part
     FreeBlock* free_list_head;  // 空闲块链表头指针
     FreeBlock* free_list_tail;  // 空闲块链表尾指针
 
+    // 当前分区内不属于该分区的对象
+    std::vector<int> other_objs;
+
     Part() : start(0), end(0), free_cells(0), last_write_pos(0), tag(0), size(0), free_list_head(nullptr), free_list_tail(nullptr) {}
     Part(int start, int end, int free_cells, int last_write_pos, int tag, int size) : 
     start(start), end(end), free_cells(free_cells), last_write_pos(last_write_pos), tag(tag), size(size), free_list_head(nullptr), free_list_tail(nullptr) {}
@@ -59,36 +63,31 @@ struct Part
     // 初始化空闲块链表
     void init_free_list();
     
-    // 在链表中插入一个新的空闲块
-    void insert_free_block(int start_pos, int end_pos);
-    
-    // 从链表中移除一个空闲块
-    void remove_free_block(FreeBlock* block);
-    
-    // 合并相邻的空闲块
-    void merge_adjacent_blocks(FreeBlock* block);
-    
-    // 分配空闲块（仅用于维护链表，不影响原有逻辑）
+    // 分配空闲块（仅维护链表，不影响原有free_cells）
     void allocate_block(int pos);
     
     // 释放块（标记为空闲，并更新链表）
     void free_block(int pos);
-    
+
     // 清理空闲块链表（释放内存）
-    void clear_free_list();
-    
+    void _clear_free_list();
+
     // 验证链表函数
     // 验证空闲块链表是否与实际空闲单元一致
-    int verify_free_list_consistency(Disk* disk);
-    
+    int _verify_free_list_consistency(Disk* disk);
     // 验证空闲块链表的连接性和排序
-    int verify_free_list_integrity();
+    int _verify_free_list_integrity();
+
+private:
+        // 在链表中插入一个新的空闲块
+    void _insert_free_block(int start_pos, int end_pos);
     
-    // 打印空闲块链表信息
-    void print_free_list_info();
+    // 从链表中移除一个空闲块
+    void _remove_free_block(FreeBlock* block);
     
-    // 获取空闲块链表的统计信息
-    void get_free_list_stats(int& total_blocks, int& max_block_size, int& min_block_size, double& avg_block_size, int& fragmentation_count);
+    // 合并相邻的空闲块
+    void _merge_adjacent_blocks(FreeBlock* block);
+
 };
 
 // 磁盘
@@ -100,6 +99,8 @@ public:
     int id;
     int size;
     Cell** cells; // 改为指针数组
+
+    int K;
     
     int point1;
     int point2;
@@ -147,13 +148,22 @@ public:
 
     std::pair<std::string, std::vector<int>> read(int op_id);
 
-    int _get_best_start(int op_id);
-
-    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
-
-    void _read_cell(int cell_idx, std::vector<int>& completed_reqs);
-
     void _get_consume_token(int start_point, int last_token, int target_point);
+
+    std::vector<std::pair<int, int>> gc();
+
+
+private:
+    // 获取最佳起点
+    int _get_best_start(int op_id);
+    // 按最佳起点读取
+    std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
+    // 读取单元格
+    void _read_cell(int cell_idx, std::vector<int>& completed_reqs);
+    // 交换两个大小相同的对象
+    void _swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs);
+    // 交换两个单元格
+    void _swap_cell(int cell_idx1, int cell_idx2);
 };
 
 // 对象

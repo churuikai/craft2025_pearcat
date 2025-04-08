@@ -8,6 +8,7 @@ inline void process_timestamp(Controller &controller, int timestamp)
     for (int i = 1; i <= N; ++i) {
         controller.DISKS[i].tokens1 = G;
         controller.DISKS[i].tokens2 = G;
+        controller.DISKS[i].K = k;
     }
     // 同步时间
     controller.timestamp = timestamp;

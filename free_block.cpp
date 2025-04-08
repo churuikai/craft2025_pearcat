@@ -43,7 +43,7 @@ void Part::allocate_block(int pos) {
             // 如果是单个单元
             if (current->start == pos && current->end == pos) {
                 // 直接移除这个块
-                remove_free_block(current);
+                _remove_free_block(current);
                 return;
             }
             
@@ -102,11 +102,11 @@ void Part::free_block(int pos) {
     }
     
     // 插入一个只包含这个位置的空闲块，并尝试合并
-    insert_free_block(pos, pos);
+    _insert_free_block(pos, pos);
 }
 
 // 在链表中插入一个新的空闲块
-void Part::insert_free_block(int start_pos, int end_pos) {
+void Part::_insert_free_block(int start_pos, int end_pos) {
     assert(tag != 0);
     // 创建新空闲块
     FreeBlock* new_block = new FreeBlock(start_pos, end_pos);
@@ -150,11 +150,11 @@ void Part::insert_free_block(int start_pos, int end_pos) {
     }
     
     // 尝试合并相邻块
-    merge_adjacent_blocks(new_block);
+    _merge_adjacent_blocks(new_block);
 }
 
 // 从链表中移除一个空闲块
-void Part::remove_free_block(FreeBlock* block) {
+void Part::_remove_free_block(FreeBlock* block) {
     assert(tag != 0);
     if (block == nullptr) return;
     
@@ -178,7 +178,7 @@ void Part::remove_free_block(FreeBlock* block) {
 }
 
 // 合并相邻的空闲块
-void Part::merge_adjacent_blocks(FreeBlock* block) {
+void Part::_merge_adjacent_blocks(FreeBlock* block) {
     assert(tag != 0);
     if (block == nullptr) return;
     
@@ -201,7 +201,7 @@ void Part::merge_adjacent_blocks(FreeBlock* block) {
         }
         
         // 递归检查是否还能继续合并
-        // merge_adjacent_blocks(prev_block);
+        // _merge_adjacent_blocks(prev_block);
         
         // 释放内存
         delete block;
@@ -227,17 +227,15 @@ void Part::merge_adjacent_blocks(FreeBlock* block) {
         }
         
         // 递归检查是否还能继续合并
-        // merge_adjacent_blocks(block);
+        // _merge_adjacent_blocks(block);
         
         // 释放内存
         delete next_block;
     }
 }
 
-
-
 // 清理空闲块链表（释放内存）
-void Part::clear_free_list() {
+void Part::_clear_free_list() {
     FreeBlock* current = free_list_head;
     while (current != nullptr) {
         FreeBlock* next = current->next;
@@ -248,179 +246,3 @@ void Part::clear_free_list() {
     free_list_tail = nullptr;
 } 
 
-// 验证链表函数实现
-
-// 验证空闲块链表是否与实际空闲单元一致
-int Part::verify_free_list_consistency(Disk* disk) {
-    assert(tag != 0);
-    int inconsistencies = 0;
-    
-    // 统计实际空闲的cell数量
-    int actual_free_cells = 0;
-    int start = std::min(this->start, this->end);
-    int end = std::max(this->start, this->end);
-    for (int i = start; i <= end; i++) {
-        if (disk->cells[i]->obj_id == 0) {
-            actual_free_cells++;
-        }
-    }
-    
-    // 统计空闲块链表中的空闲cell数量
-    int list_free_cells = 0;
-    std::vector<bool> in_free_list(disk->size + 1, false);
-    FreeBlock *current = free_list_head;
-    while (current != nullptr) {
-        for (int i = current->start; i <= current->end; ++i) {
-            if (!in_free_list[i]) {  // 避免重复计数
-                list_free_cells++;
-                in_free_list[i] = true;
-            } else {
-                // 如果已经计数过，说明存在重叠块
-                inconsistencies++;
-                debug("链表错误：空闲块重叠在位置", i);
-            }
-        }
-        current = current->next;
-    }
-    
-    // 比较数量是否一致
-    if (actual_free_cells != list_free_cells || actual_free_cells != free_cells) {
-        inconsistencies++;
-        debug("分区不一致：tag=", tag, " size=", size, 
-              " part范围=", std::min(start, end), "-", std::max(start, end),
-              " actual_free=", actual_free_cells, 
-              " list_free=", list_free_cells, 
-              " part.free_cells=", free_cells);
-        
-        // 打印前20个空闲单元位置
-        std::string free_cells_str = "实际空闲位置: ";
-        int count = 0;
-        for (int i = std::min(start, end); i <= std::max(start, end) && count < 20; ++i) {
-            if (disk->cells[i]->obj_id == 0) {
-                free_cells_str += std::to_string(i) + " ";
-                count++;
-            }
-        }
-        debug(free_cells_str);
-        
-        // 打印链表中的前20个空闲块
-        std::string free_blocks_str = "链表空闲块: ";
-        count = 0;
-        FreeBlock* block = free_list_head;
-        while (block != nullptr && count < 20) {
-            free_blocks_str += "[" + std::to_string(block->start) + "-" + std::to_string(block->end) + "] ";
-            block = block->next;
-            count++;
-        }
-        debug(free_blocks_str);
-    }
-    
-    // 详细验证每个cell
-    std::vector<bool> is_free(disk->size + 1, false);
-    
-    // 标记cells中哪些是空闲的
-    for (int i = start; i <= end; i++) {
-        if (disk->cells[i]->obj_id == 0) {
-            is_free[i] = true;
-        }
-    }
-    
-    // 检查链表中的每个块
-    current = free_list_head;
-    while (current != nullptr) {
-        for (int i = current->start; i <= current->end; i++) {
-            if (!is_free[i]) {
-                inconsistencies++;
-                debug("链表错误：cell[", i, "]在链表中标记为空闲，但实际已被占用");
-            }
-            // 标记为已检查
-            is_free[i] = false;
-        }
-        current = current->next;
-    }
-    
-    // 检查是否有空闲的cell没有在链表中
-    for (int i = start; i <= end; i++) {
-        if (is_free[i]) {
-            inconsistencies++;
-            debug("链表错误：cell[", i, "]实际空闲，但在链表中未找到");
-        }
-    }
-    
-    return inconsistencies;
-}
-
-// 验证空闲块链表的连接性和排序
-int Part::verify_free_list_integrity() {
-    assert(tag != 0);
-    int inconsistencies = 0;
-    
-    // 检查链表的连接性
-    FreeBlock* current = free_list_head;
-    while (current != nullptr && current->next != nullptr) {
-        if (current->next->prev != current) {
-            inconsistencies++;
-            debug("链表错误：双向链表连接错误，块[", current->start, "-", current->end, "]的后继块的前驱不是自己");
-        }
-        
-        // 检查是否按起始位置排序
-        if (current->start >= current->next->start) {
-            inconsistencies++;
-            debug("链表错误：块未按起始位置排序，块[", current->start, "-", current->end, 
-                  "]排在块[", current->next->start, "-", current->next->end, "]之前");
-        }
-        
-        current = current->next;
-    }
-    
-    return inconsistencies;
-}
-
-// 打印空闲块链表信息
-void Part::print_free_list_info() {
-    assert(tag != 0);
-    
-    if (free_list_head == nullptr) {
-        info("Tag", tag, "Size", size, "：无空闲块");
-        return;
-    }
-    
-    // 只输出前5个空闲块
-    int count = 0;
-    std::string blocks_info = "Tag" + std::to_string(tag) + " Size" + std::to_string(size) + "：";
-    FreeBlock *current = free_list_head;
-    while (current != nullptr && count < 5) {
-        blocks_info += "[" + std::to_string(current->start) + "-" + std::to_string(current->end) + "] ";
-        current = current->next;
-        count++;
-    }
-    
-    if (current != nullptr) {
-        blocks_info += "... (还有更多空闲块)";
-    }
-    
-    info(blocks_info);
-}
-
-// 获取空闲块链表的统计信息
-void Part::get_free_list_stats(int& total_blocks, int& max_block_size, int& min_block_size, double& avg_block_size, int& fragmentation_count) {
-    assert(tag != 0);
-    
-    FreeBlock *current = free_list_head;
-    while (current != nullptr) {
-        int block_size = current->end - current->start + 1;
-        total_blocks++;
-        max_block_size = std::max(max_block_size, block_size);
-        min_block_size = std::min(min_block_size, block_size);
-        avg_block_size += block_size;
-        
-        if (current->next != nullptr) {
-            // 如果当前块与下一个块不连续，增加碎片计数
-            if (current->end + 1 < current->next->start) {
-                fragmentation_count++;
-            }
-        }
-        
-        current = current->next;
-    }
-} 

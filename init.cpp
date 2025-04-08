@@ -115,16 +115,17 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
 
     // 针对磁盘的具体标签来调整合适的空间，针对非一个磁盘16种标签的策略
     auto this_tag_size_rate = tag_size_rate;
-    float all_rate = 0;
-    for(int tag: tag_order) {
-        all_rate += this_tag_size_rate[tag];
-    }
+    // float all_rate = 0;
+    // for(int tag: tag_order) {
+    //     all_rate += this_tag_size_rate[tag];
+    // }
 
-    for(int tag: tag_order) {
-        this_tag_size_rate[tag] /= all_rate;
-    }
+    // for(int tag: tag_order) {
+    //     this_tag_size_rate[tag] /= all_rate;
+    // }
 
-    float data_rate = all_rate*(1.0*M/tag_order.size());
+    // float data_rate = all_rate*(1.0*M/tag_order.size());
+    float data_rate = 1;
     
     // 磁盘分区
     // tag 0 : 备份区，占比 90%*back/3*size
@@ -291,7 +292,7 @@ Disk::~Disk() {
     // 清理所有分区的空闲块链表
     for (auto& tag_parts : part_tables) {
         for (auto& part : tag_parts) {
-            part.clear_free_list();
+            part._clear_free_list();
         }
     }
     

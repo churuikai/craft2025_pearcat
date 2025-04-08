@@ -283,6 +283,8 @@ void Disk::_read_cell(int cell_idx, std::vector<int>& completed_reqs)
     {
         return;
     }
+    
+
     // 检查req是否完成 更新完成的 req
     for (int req_id : cells[cell_idx]->req_ids)
     {
@@ -307,7 +309,7 @@ void Disk::_read_cell(int cell_idx, std::vector<int>& completed_reqs)
     for (auto &[disk_id, cell_idxs] : controller->OBJECTS[cells[cell_idx]->obj_id].replicas)
     {
         assert(cells[cell_idx]->obj_id != 0);
-        int unit_cell_idx = cell_idxs[cells[cell_idx]->unit_id -1];
+        int unit_cell_idx = cell_idxs[cells[cell_idx]->unit_id-1];
         controller->DISKS[disk_id].req_cells_num-=controller->DISKS[disk_id].cells[unit_cell_idx]->req_ids.size();
         controller->DISKS[disk_id].cells[unit_cell_idx]->req_ids.clear();
     }

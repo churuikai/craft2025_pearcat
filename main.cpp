@@ -3,7 +3,7 @@
 #include "io.h"
 #include "controller.h"
 #include "disk_obj_req.h"
-
+#include "verify.h"
 #include "debug.h"
 
 
@@ -50,7 +50,9 @@ int main() {
 
         // 处理垃圾回收事件, 每1800时间片执行一次
         if (timestamp % 1800 == 0) {
+            debug("timestamp: ", timestamp);
             process_gc(controller);
+
         }
 
         // 验证数据结构
