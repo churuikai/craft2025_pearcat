@@ -8,7 +8,7 @@ inline float G_float;
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
 inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
-inline const float DATA_COMPRESSION = 0.87; // 数据压缩系数 0-1
+inline const float DATA_COMPRESSION = 0.82; // 数据压缩系数 0-1
 
 //是否间隔反向
 inline const int IS_INTERVAL_REVERSE = 1; // 0-1

@@ -72,6 +72,9 @@ public:
     // 清理空闲块链表（释放内存）
     void _clear_free_list();
 
+    // 按指定方向查找最合适匹配的空闲节点
+    FreeBlock* _find_best_block(int target_size, bool is_reverse, bool first_or_best);
+
     // 验证链表函数
     // 验证空闲块链表是否与实际空闲单元一致
     int _verify_free_list_consistency(Disk* disk);
@@ -160,10 +163,20 @@ private:
     std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
     // 读取单元格
     void _read_cell(int cell_idx, std::vector<int>& completed_reqs);
+    // 交换大小、tag都能匹配的
+    void _gc_size_tag(std::vector<std::pair<int, int>>& gc_pairs);
+    // 交换大小拼接后匹配、tag能匹配的; 是否考虑加入空闲块
+    void _gc_sizemerge_tag(std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
     // 交换两个大小相同的对象
     void _swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs);
     // 交换两个单元格
     void _swap_cell(int cell_idx1, int cell_idx2);
+    // 查找一组对象，使其大小之和等于目标大小
+    bool _find_size_match(const std::vector<int>& candidate_objs, int target_size, std::vector<int>& matched_objs, int& padding);
+    // 动态规划求解子集和问题
+    bool _dp_subset_sum(const std::vector<std::pair<int, int>>& size_obj_pairs, int target_size, std::vector<int>& matched_objs);
+    // 执行一对多交换
+    void _swap_obj_multiple(int single_obj_idx, const std::vector<int>& multi_obj_idxs, std::vector<std::pair<int, int>>& gc_pairs, int padding, Part* target_part);
 };
 
 // 对象

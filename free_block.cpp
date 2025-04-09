@@ -5,6 +5,28 @@
 #include <climits>
 #include <string>
 
+// 按指定方向查找最合适匹配的空闲节点
+FreeBlock* Part::_find_best_block(int target_size, bool is_reverse, bool first_or_best) 
+{
+    FreeBlock* current = is_reverse ? free_list_tail : free_list_head;
+    int best_diff = INT_MAX;
+    FreeBlock* best_block = nullptr;
+    while (current != nullptr) {
+        int diff = current->end - current->start + 1 - target_size;
+        if (diff >= 0 && diff < best_diff) {
+            if(first_or_best) {
+                return current;
+            }
+            best_diff = diff;
+            best_block = current;
+        }
+        current = is_reverse ? current->prev : current->next;
+    }
+    return best_block;
+}
+
+
+
 // 初始化空闲块链表
 void Part::init_free_list() {
     assert(tag != 0);
