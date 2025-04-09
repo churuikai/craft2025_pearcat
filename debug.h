@@ -1,5 +1,7 @@
 #pragma once
 
+#if defined(DEBUG) || defined(INFO)
+
 #include <string>
 #include <fstream>
 #include <mutex>
@@ -174,18 +176,24 @@ private:
     }
 };
 
+#endif // defined(DEBUG) || defined(INFO)
+
 // -- Public interface functions --
 
 // Clears logs and creates new log/info files in the "log" folder.
 inline void init_logs() {
+#if defined(DEBUG) || defined(INFO)
     Logger::instance().init_logs();
+#endif
 }
 
 #ifdef DEBUG
 // Debug function: accepts any number of arguments.
 template<typename... Args>
 inline void debug(const Args&... args) {
+#if defined(DEBUG)
     Logger::instance().log_debug(args...);
+#endif
 }
 #else
 inline void debug(...) {}
@@ -195,7 +203,9 @@ inline void debug(...) {}
 // Info function: accepts any number of arguments.
 template<typename... Args>
 inline void info(const Args&... args) {
+#if defined(INFO)
     Logger::instance().log_info(args...);
+#endif
 }
 #else
 inline void info(...) {}
