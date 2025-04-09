@@ -289,23 +289,25 @@ void Disk::_swap_m2m(const std::vector<int>& matched_objs1, const std::vector<in
 
 
 void Disk::_swap_cell(int cell_idx1, int cell_idx2) {
+    assert(cell_idx1 != cell_idx2);
     // 维护分区
     Cell *cell1 = cells[cell_idx1];
     Cell *cell2 = cells[cell_idx2];
     if(cell1->obj_id == 0 and cell2->obj_id == 0) return;
     if(cell1->obj_id == 0 and cell2->obj_id != 0) 
     {
+
         cell1->part->allocate_block(cell_idx1);
-        cell2->part->free_block(cell_idx2);
         cell1->part->free_cells--;
+        cell2->part->free_block(cell_idx2);
         cell2->part->free_cells++;
     }
     else if(cell1->obj_id != 0 and cell2->obj_id == 0)
     {
-        cell1->part->free_block(cell_idx1);
         cell2->part->allocate_block(cell_idx2);
-        cell1->part->free_cells++;
         cell2->part->free_cells--;
+        cell1->part->free_block(cell_idx1);
+        cell1->part->free_cells++;
     }
     // 维护对象
     Object &obj1 = controller->OBJECTS[cell1->obj_id];

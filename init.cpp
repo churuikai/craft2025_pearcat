@@ -280,9 +280,11 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     }
     
     // 初始化冗余区的空闲块链表
-    for (auto& part : get_parts(17, 1)) {
-        if (part.free_cells > 0) {
-            part.init_free_list();
+    for(int size=1; size<=5; ++size) {
+        for (auto& part : get_parts(17, size)) {
+            if (part.free_cells > 0) {
+                part.init_free_list();
+            }
         }
     }
 }

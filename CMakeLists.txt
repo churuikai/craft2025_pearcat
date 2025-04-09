@@ -11,6 +11,7 @@ option(BUILD_SHARED_LIBS    ""  OFF) # 不要修改
 aux_source_directory(./                     cur_src) # 不要修改
 
 # 添加编译优化选项
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-unused-result -fsanitize=undefined")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wno-unused-result")
 
 # 添加包含目录（当前目录）

@@ -2,6 +2,7 @@
 #include "io.h"
 #include "controller.h"
 #include "disk_obj_req.h"
+#include "debug.h"
 
 void process_delete(Controller &controller)
 {
@@ -78,12 +79,12 @@ void Disk::free_cell(int cell_id)
     }
     
     Part* part = cells[cell_id]->part;
-    part->free_cells++;
-    
+
     // 更新空闲块链表（只更新非备份区的分区）
     if (part->tag != 0) {
         part->free_block(cell_id);
     }
+    part->free_cells++;
     
     cells[cell_id]->free();
 }

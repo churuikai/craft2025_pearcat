@@ -36,7 +36,7 @@ struct FreeBlock {
     int end;            // 空闲块结束位置
     FreeBlock* prev;    // 前一个空闲块
     FreeBlock* next;    // 后一个空闲块
-    
+    FreeBlock() : start(0), end(0), prev(nullptr), next(nullptr) {}
     FreeBlock(int s, int e) : start(s), end(e), prev(nullptr), next(nullptr) {}
 };
 

@@ -8,6 +8,12 @@
 // 按指定方向查找最合适匹配的空闲节点
 FreeBlock* Part::_find_best_block(int target_size, bool is_reverse, bool first_or_best) 
 {
+    assert(free_list_head != nullptr or free_cells == 0);
+    if(free_list_head != nullptr ) assert(free_list_head->prev == nullptr);
+    assert(free_list_tail != nullptr or free_cells == 0);
+    if(free_list_tail != nullptr) assert(free_list_tail->next == nullptr);
+
+    assert(tag != 0);
     FreeBlock* current = is_reverse ? free_list_tail : free_list_head;
     int best_diff = INT_MAX;
     FreeBlock* best_block = nullptr;
@@ -47,7 +53,11 @@ void Part::init_free_list() {
 void Part::allocate_block(int pos) {
     assert(tag != 0);
 
-
+    assert(this->tag !=0);
+    assert(free_list_head != nullptr or free_cells == 0);
+    if(free_list_head != nullptr ) assert(free_list_head->prev == nullptr);
+    assert(free_list_tail != nullptr or free_cells == 0);
+    if(free_list_tail != nullptr) assert(free_list_tail->next == nullptr);
     // 验证位置有效性
     int min_pos = std::min(start, end);
     int max_pos = std::max(start, end);
@@ -91,6 +101,9 @@ void Part::allocate_block(int pos) {
             
             if (current->next != nullptr) {
                 current->next->prev = new_block;
+            } else {
+                // 如果current是尾节点,新块成为尾节点
+                free_list_tail = new_block;
             }
             
             current->next = new_block;
@@ -106,6 +119,13 @@ void Part::allocate_block(int pos) {
 // 释放一个位置（将位置标记为空闲）
 void Part::free_block(int pos) {
     assert(tag != 0);
+    assert(this->tag !=0);
+    // debug("free block", "free_cells", free_cells);
+    assert(free_list_head != nullptr or free_cells == 0);
+    if(free_list_head != nullptr ) assert(free_list_head->prev == nullptr);
+    assert(free_list_tail != nullptr or free_cells == 0);
+    if(free_list_tail != nullptr) assert(free_list_tail->next == nullptr);
+
     // 验证位置有效性
     int min_pos = std::min(start, end);
     int max_pos = std::max(start, end);
