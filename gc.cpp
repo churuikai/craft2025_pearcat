@@ -43,7 +43,6 @@ std::vector<std::pair<int, int>> Disk::gc() {
                     {
                         part.other_objs.push_back(cells[i]->obj_id);
                     }
-                    // debug("time", controller->timestamp, "gc", "part-tag", part.tag,"obj-tag", cells[i]->tag, "obj", cells[i]->obj_id, "cell", i);
                 }
                 if(i == part.end) break;
             }
@@ -77,13 +76,28 @@ std::vector<std::pair<int, int>> Disk::gc() {
         {
             if(this->K > 0)
             {
-                // if(controller->timestamp == 37800) debug("time", controller->timestamp,"tag", tag, "part", part.tag, "start", part.start, "end", part.end);
                 // 分区内部聚拢
                 _part_gc_inner(part, gc_pairs, false);
             }
         }
     }
 
+    
+    // 遍历每个tag
+    for(auto &tag : sorted_tags)
+    {
+        // 获取该tag的分区
+        auto &parts = get_parts(tag, 1);
+        // 遍历每个分区
+        for(auto &part : parts)
+        {
+            if(this->K > 0)
+            {
+                // 分区内部聚拢
+                _part_gc_inner(part, gc_pairs, true);
+            }
+        }
+    }
 
     // 打印K
     debug("剩余 K", this->K);
@@ -100,49 +114,218 @@ void Disk::_part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs
     int end = part.end;
     int start = part.start;
     bool is_reverse = end < start;
-    while(end != start)
-    {
-        if(this->K == 0) return;
-        assert(cells[end]->part->tag == part.tag);
-        // 找末端第一个本区域的obj
-        if(cells[end]->obj_id == 0 or controller->OBJECTS[cells[end]->obj_id].tag != part.tag)
-        {
-            end += is_reverse ? 1 : -1;
-            continue;
-        }
-        else
-        {
-            bool is_find = false;
-            // 从start端开始找空闲块
-            for(int i = start; i != end; i += is_reverse ? -1 : 1)
+    if (not is_split_obj or true) {
+        while(end != start) {
+            // 找到末端第一个完整的obj
+            if(cells[end]->obj_id == 0 or controller->OBJECTS[cells[end]->obj_id].tag != part.tag)
             {
-                assert(cells[i]->part->tag == part.tag);
-                if((cells[i]->obj_id == 0 or controller->OBJECTS[cells[i]->obj_id].tag != part.tag) and this->K>=1)
+                end += is_reverse ? 1 : -1;
+                continue;
+            }
+            else
+            {
+                assert(cells[end]->obj_id != 0 and controller->OBJECTS[cells[end]->obj_id].tag == part.tag);
+                int obj_size = controller->OBJECTS[cells[end]->obj_id].size;
+                int obj_id = cells[end]->obj_id;
+
+                std::vector<int> candidate_cells;
+                while(cells[end]->obj_id == obj_id)
                 {
-                    int cell_idx1 = end;
-                    int cell_idx2 = i;
-                    int obj_id1 = cells[cell_idx1]->obj_id;
-                    int obj_id2 = cells[cell_idx2]->obj_id;
-                    int obj_size1 = controller->OBJECTS[obj_id1].size;
-                    int obj_size2 = controller->OBJECTS[obj_id2].size;
-                    int obj_tag1 = controller->OBJECTS[obj_id1].tag;
-                    int obj_tag2 = controller->OBJECTS[obj_id2].tag;
-                    int part_tag1 = cells[cell_idx1]->part->tag;
-                    int part_tag2 = cells[cell_idx2]->part->tag;
-                    debug("inr", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
-         
-                    _swap_cell(end, i);
-                    gc_pairs.push_back({cell_idx1, cell_idx2});
-                    this->K -= 1;
-                    end += is_reverse ? 1 : -1;
-                    is_find = true;
-                    break;
+                    assert(is_reverse ? end <= start : end >= start);
+                    candidate_cells.push_back(end);
+                    if(end != start) end += is_reverse ? 1 : -1;
+                }
+                if(end == start) break;
+                
+                assert(candidate_cells.size() > 0);
+
+                // 找到start-end中最佳匹配的空闲区或其他对象
+                
+                // 收集start-end中所有空闲块和其它对象块
+                std::vector<std::vector<int>> candidate_blocks;
+                std::vector<std::vector<int>> candidate_blocks_tmp;
+                int i = start;
+                while(true)
+                {
+                    if(controller->OBJECTS[cells[i]->obj_id].tag != part.tag)
+                    {
+                        candidate_blocks.push_back({});
+                        while(controller->OBJECTS[cells[i]->obj_id].tag != part.tag or cells[i]->obj_id == 0)
+                        {
+                            candidate_blocks.back().push_back(i);
+                            if(i == end) break;
+                            i += is_reverse ? -1 : 1;
+                        }
+                        if(i == end) break;
+                    }
+                    else if(cells[i]->obj_id == 0)
+                    {
+                        candidate_blocks_tmp.push_back({});
+                        while(cells[i]->obj_id == 0 or controller->OBJECTS[cells[i]->obj_id].tag != part.tag)
+                        {
+                            candidate_blocks_tmp.back().push_back(i);
+                            if(i == end) break;
+                            i += is_reverse ? -1 : 1;
+                        }
+                        if(i == end) break;
+                    }
+                    else
+                    {
+                        if(i == end) break;
+                        i += is_reverse ? -1 : 1;
+                    }
+                }
+                // 合并candidate_blocks_tmp
+                candidate_blocks.insert(candidate_blocks.end(), candidate_blocks_tmp.begin(), candidate_blocks_tmp.end());
+
+                // 找到start-end中最佳匹配的空闲区或其他对象
+                int best_diff = 9999;
+                int best_block_idx = -1;
+                for(int i = 0; i < candidate_blocks.size(); i++)
+                {
+                    assert(candidate_blocks[i].size() > 0);
+                    int diff = candidate_blocks[i].size() - candidate_cells.size();
+                    if(diff < best_diff and diff >= 0)
+                    {
+                        best_diff = diff;
+                        best_block_idx = i;
+                    }
+                }
+                if(best_block_idx != - 1)
+                {
+                    for(int i = 0; i < candidate_cells.size(); i++)
+                    {
+                        int cell_idx1 = candidate_cells[i];
+                        int cell_idx2 = candidate_blocks[best_block_idx][i];
+                        int obj_id1 = cells[cell_idx1]->obj_id;
+                        int obj_id2 = cells[cell_idx2]->obj_id;
+                        int obj_size1 = controller->OBJECTS[obj_id1].size;
+                        int obj_size2 = controller->OBJECTS[obj_id2].size;
+                        int obj_tag1 = controller->OBJECTS[obj_id1].tag;
+                        int obj_tag2 = controller->OBJECTS[obj_id2].tag;
+                        int part_tag1 = cells[cell_idx1]->part->tag;
+                        int part_tag2 = cells[cell_idx2]->part->tag;
+                        debug("inr", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+            
+                        _swap_cell(candidate_cells[i], candidate_blocks[best_block_idx][i]);
+                        gc_pairs.push_back({candidate_cells[i], candidate_blocks[best_block_idx][i]});
+                        this->K -= 1;
+                        if(this->K == 0) return;
+                    }
+                }
+                // 如果找不到最佳匹配，则按传统方法
+                else
+                {
+                    if(not is_split_obj) return;
+                    // 从start端开始找空闲块
+                    std::reverse(candidate_cells.begin(), candidate_cells.end());
+                    for(int i = start; ; i += is_reverse ? -1 : 1)
+                    {
+                        if(controller->OBJECTS[cells[i]->obj_id].tag != part.tag)
+                        {
+                            int cell_idx1 = i;
+                            int cell_idx2 = candidate_cells.back();
+                            int obj_id1 = cells[cell_idx1]->obj_id;
+                            int obj_id2 = cells[cell_idx2]->obj_id;
+                            int obj_size1 = controller->OBJECTS[obj_id1].size;
+                            int obj_size2 = controller->OBJECTS[obj_id2].size;
+                            int obj_tag1 = controller->OBJECTS[obj_id1].tag;
+                            int obj_tag2 = controller->OBJECTS[obj_id2].tag;
+                            int part_tag1 = cells[cell_idx1]->part->tag;
+                            int part_tag2 = cells[cell_idx2]->part->tag;
+                            debug("inr-split", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+                
+                            _swap_cell(i, candidate_cells.back());
+                            gc_pairs.push_back({i, candidate_cells.back()});
+                            candidate_cells.pop_back();
+                            
+                            this->K -= 1;
+                            if(candidate_cells.size() == 0) break;
+                            if(this->K == 0) return;
+                        }
+                        if(i == end) break;
+                    }
+                    for(int i = start; ; i += is_reverse ? -1 : 1)
+                    {
+                        if(candidate_cells.size() == 0) break;
+                        if(cells[i]->obj_id == 0)
+                        {
+                            int cell_idx1 = i;
+                            int cell_idx2 = candidate_cells.back();
+                            int obj_id1 = cells[cell_idx1]->obj_id;
+                            int obj_id2 = cells[cell_idx2]->obj_id;
+                            int obj_size1 = controller->OBJECTS[obj_id1].size;
+                            int obj_size2 = controller->OBJECTS[obj_id2].size;
+                            int obj_tag1 = controller->OBJECTS[obj_id1].tag;
+                            int obj_tag2 = controller->OBJECTS[obj_id2].tag;
+                            int part_tag1 = cells[cell_idx1]->part->tag;
+                            int part_tag2 = cells[cell_idx2]->part->tag;
+                            debug("inr-split", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+                
+                            _swap_cell(i, candidate_cells.back());
+                            gc_pairs.push_back({i, candidate_cells.back()});
+                            candidate_cells.pop_back();
+                            
+                            this->K -= 1;
+                            if(candidate_cells.size() == 0) break;
+                            if(this->K == 0) return;
+                        }
+                        if(i == end) break;
+                    }
+                    // 如果还有剩余的cell，则已经没有空闲空间
+                    if(candidate_cells.size() > 0) return;
                 }
             }
-            if (!is_find) return;
-        }
+            // 如果K已经用完，则退出
+            if(this->K == 0) return;
 
+        }
     }
+    return;
+
+    // while(end != start)
+    // {
+    //     if(this->K == 0) return;
+    //     assert(cells[end]->part->tag == part.tag);
+    //     // 找末端第一个本区域的obj
+    //     if(cells[end]->obj_id == 0 or controller->OBJECTS[cells[end]->obj_id].tag != part.tag)
+    //     {
+    //         end += is_reverse ? 1 : -1;
+    //         continue;
+    //     }
+    //     else
+    //     {
+    //         bool is_find = false;
+    //         // 从start端开始找空闲块
+    //         for(int i = start; i != end; i += is_reverse ? -1 : 1)
+    //         {
+    //             assert(cells[i]->part->tag == part.tag);
+    //             if((cells[i]->obj_id == 0 or controller->OBJECTS[cells[i]->obj_id].tag != part.tag) and this->K>=1)
+    //             {
+    //                 int cell_idx1 = end;
+    //                 int cell_idx2 = i;
+    //                 int obj_id1 = cells[cell_idx1]->obj_id;
+    //                 int obj_id2 = cells[cell_idx2]->obj_id;
+    //                 int obj_size1 = controller->OBJECTS[obj_id1].size;
+    //                 int obj_size2 = controller->OBJECTS[obj_id2].size;
+    //                 int obj_tag1 = controller->OBJECTS[obj_id1].tag;
+    //                 int obj_tag2 = controller->OBJECTS[obj_id2].tag;
+    //                 int part_tag1 = cells[cell_idx1]->part->tag;
+    //                 int part_tag2 = cells[cell_idx2]->part->tag;
+    //                 debug("inr", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+         
+    //                 _swap_cell(end, i);
+    //                 gc_pairs.push_back({cell_idx1, cell_idx2});
+    //                 this->K -= 1;
+    //                 end += is_reverse ? 1 : -1;
+    //                 is_find = true;
+    //                 break;
+    //             }
+    //         }
+    //         if (!is_find) return;
+    //     }
+
+    // }
 }
 
 
