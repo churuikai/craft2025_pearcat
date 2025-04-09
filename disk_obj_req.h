@@ -166,17 +166,25 @@ private:
     // 交换大小、tag都能匹配的
     void _gc_size_tag(std::vector<std::pair<int, int>>& gc_pairs);
     // 交换大小拼接后匹配、tag能匹配的; 是否考虑加入空闲块
-    void _gc_sizemerge_tag(std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
+    void _disk_gc_s2m(std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
+    void _part_gc_s2m(Part& part, std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
+    // 多对多交换
+    void _disk_gc_m2m(std::vector<std::pair<int, int>>& gc_pairs);
+    void _part_gc_m2m(Part& part, std::vector<std::pair<int, int>>& gc_pairs);
     // 交换两个大小相同的对象
     void _swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs);
     // 交换两个单元格
     void _swap_cell(int cell_idx1, int cell_idx2);
     // 查找一组对象，使其大小之和等于目标大小
-    bool _find_size_match(const std::vector<int>& candidate_objs, int target_size, std::vector<int>& matched_objs, int& padding);
+    bool _find_s2m_match(const std::vector<int>& candidate_objs, int target_size, std::vector<int>& matched_objs, int& padding);
+    // 多对多匹配
+    bool _find_m2m_match(const std::vector<int>& candidate_objs1, const std::vector<int>& candidate_objs2, std::vector<int>& matched_objs1, std::vector<int>& matched_objs2, int max_target_size);
     // 动态规划求解子集和问题
     bool _dp_subset_sum(const std::vector<std::pair<int, int>>& size_obj_pairs, int target_size, std::vector<int>& matched_objs);
     // 执行一对多交换
-    void _swap_obj_multiple(int single_obj_idx, const std::vector<int>& multi_obj_idxs, std::vector<std::pair<int, int>>& gc_pairs, int padding, Part* target_part);
+    void _swap_s2m(int single_obj_idx, const std::vector<int>& multi_obj_idxs, std::vector<std::pair<int, int>>& gc_pairs, int padding, Part* target_part);
+    // 执行多对多交换
+    void _swap_m2m(const std::vector<int>& matched_objs1, const std::vector<int>& matched_objs2, std::vector<std::pair<int, int>>& gc_pairs);
 };
 
 // 对象

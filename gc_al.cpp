@@ -4,9 +4,72 @@
 #include "data_analysis.h"
 #include "io.h"
 
+// 多对多匹配
 
-// 查找一组对象，使其大小之和等于目标大小, free_cells表示允许插入的最大空闲块数量
-bool Disk::_find_size_match(const std::vector<int>& candidate_objs, int target_size, std::vector<int>& matched_objs, int& padding)
+// 多对多匹配函数，尽可能找到最大的匹配
+bool Disk::_find_m2m_match(const std::vector<int>& candidate_objs1, 
+                           const std::vector<int>& candidate_objs2, 
+                           std::vector<int>& matched_objs1,
+                           std::vector<int>& matched_objs2,
+                           int max_target_size)
+{
+    // 准备两组对象的大小列表
+    std::vector<std::pair<int, int>> size_obj_pairs1; // <size, obj_id>
+    std::vector<std::pair<int, int>> size_obj_pairs2;
+    
+    for(auto obj_id : candidate_objs1) {
+        size_obj_pairs1.push_back({controller->OBJECTS[obj_id].size, obj_id});
+    }
+    for(auto obj_id : candidate_objs2) {
+        size_obj_pairs2.push_back({controller->OBJECTS[obj_id].size, obj_id});
+    }
+    
+    // 对两组对象按大小排序（从大到小）
+    // std::sort(size_obj_pairs1.begin(), size_obj_pairs1.end(), 
+    //           [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+    //               return a.first > b.first;
+    //           });
+    // std::sort(size_obj_pairs2.begin(), size_obj_pairs2.end(), 
+    //           [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+    //               return a.first > b.first;
+    //           });
+    
+    // 计算两组对象的总大小
+    int total_size1 = 0, total_size2 = 0;
+    for(const auto& pair : size_obj_pairs1) total_size1 += pair.first;
+    for(const auto& pair : size_obj_pairs2) total_size2 += pair.first;
+    
+    // 最大可能的目标大小是两组对象总大小的较小值
+    max_target_size = std::min(std::min(total_size1, total_size2), max_target_size);
+    
+    // 从最大可能的目标大小开始向下搜索
+    for(int target_size = max_target_size; target_size > 0; target_size--) {
+        std::vector<int> tmp_matched1, tmp_matched2;
+        int padding1 = 0, padding2 = 0;
+        
+        // 尝试在第一组对象中找到匹配
+        bool found1 = _find_s2m_match(candidate_objs1, target_size, tmp_matched1, padding1);
+        if(!found1) continue;
+        
+        // 尝试在第二组对象中找到匹配
+        bool found2 = _find_s2m_match(candidate_objs2, target_size, tmp_matched2, padding2);
+        if(!found2) continue;
+        
+        // 如果两组对象都找到了匹配，则返回结果
+        matched_objs1 = tmp_matched1;
+        matched_objs2 = tmp_matched2;
+        return true;
+    }
+    
+    // 如果没有找到任何匹配，返回false
+    return false;
+}
+
+
+
+
+// 查找一组对象，使其大小之和等于目标大小, padding 表示允许插入的最大空闲块数量
+bool Disk::_find_s2m_match(const std::vector<int>& candidate_objs, int target_size, std::vector<int>& matched_objs, int& padding)
 {
     // 准备候选对象的大小列表
     std::vector<std::pair<int, int>> size_obj_pairs; // <size, obj_id>
@@ -15,13 +78,19 @@ bool Disk::_find_size_match(const std::vector<int>& candidate_objs, int target_s
         size_obj_pairs.push_back({controller->OBJECTS[obj_id].size, obj_id});
     }
     // 对候选对象按大小排序（从大到小）
-    std::sort(size_obj_pairs.begin(), size_obj_pairs.end(), 
-              [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
-                  return a.first > b.first;
-              });
+    // std::sort(size_obj_pairs.begin(), size_obj_pairs.end(), 
+    //           [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+    //               return a.first > b.first;
+    //           });
     
     // 使用动态规划找到匹配的组合
     bool found = _dp_subset_sum(size_obj_pairs, target_size, matched_objs);
+
+    if(found)
+    {
+        padding = 0;
+        return true;
+    }
     
     // 如果没有找到匹配的组合，且允许填充空闲块
     if(!found && padding > 0) {
@@ -99,7 +168,7 @@ bool Disk::_dp_subset_sum(const std::vector<std::pair<int, int>>& size_obj_pairs
 }
 
 // 执行一对多交换
-void Disk::_swap_obj_multiple(int single_obj_idx, const std::vector<int>& multi_obj_idxs, std::vector<std::pair<int, int>>& gc_pairs, int padding, Part* target_part)
+void Disk::_swap_s2m(int single_obj_idx, const std::vector<int>& multi_obj_idxs, std::vector<std::pair<int, int>>& gc_pairs, int padding, Part* target_part)
 {
     // 验证单个对象的大小等于多个对象大小之和
     int single_obj_size = controller->OBJECTS[single_obj_idx].size;
@@ -161,11 +230,62 @@ void Disk::_swap_obj_multiple(int single_obj_idx, const std::vector<int>& multi_
     // 执行单元格交换
     for(size_t i = 0; i < single_obj_cells.size(); i++)
     {
+        int cell_idx1 = single_obj_cells[i];
+        int cell_idx2 = multi_obj_cells[i];
+        int obj_id1 = cells[cell_idx1]->obj_id;
+        int obj_id2 = cells[cell_idx2]->obj_id;
+        int obj_size1 = controller->OBJECTS[obj_id1].size;
+        int obj_size2 = controller->OBJECTS[obj_id2].size;
+        int obj_tag1 = controller->OBJECTS[obj_id1].tag;
+        int obj_tag2 = controller->OBJECTS[obj_id2].tag;
+        int part_tag1 = cells[cell_idx1]->part->tag;
+        int part_tag2 = cells[cell_idx2]->part->tag;
+        debug("s2m", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+        
         _swap_cell(single_obj_cells[i], multi_obj_cells[i]);
         gc_pairs.push_back({single_obj_cells[i], multi_obj_cells[i]});
     }
 }
 
+// 执行多对多交换
+void Disk::_swap_m2m(const std::vector<int>& matched_objs1, const std::vector<int>& matched_objs2, std::vector<std::pair<int, int>>& gc_pairs)
+{
+    // 验证所有对象都在当前磁盘上
+    assert(controller->OBJECTS[matched_objs1[0]].replicas[0].first == this->id);
+    assert(controller->OBJECTS[matched_objs2[0]].replicas[0].first == this->id);
+    // 获取所有对象的单元格索引
+    std::vector<int> matched_objs1_cells;
+    std::vector<int> matched_objs2_cells;
+    for(auto obj_idx : matched_objs1)
+    {
+        const auto& cells = controller->OBJECTS[obj_idx].replicas[0].second;
+        matched_objs1_cells.insert(matched_objs1_cells.end(), cells.begin(), cells.end());
+    }
+    for(auto obj_idx : matched_objs2)
+    {
+        const auto& cells = controller->OBJECTS[obj_idx].replicas[0].second;
+        matched_objs2_cells.insert(matched_objs2_cells.end(), cells.begin(), cells.end());
+    }
+    // 执行单元格交换
+    for(size_t i = 0; i < matched_objs1_cells.size(); i++)
+    {
+        int cell_idx1 = matched_objs1_cells[i];
+        int cell_idx2 = matched_objs2_cells[i];
+        int obj_id1 = cells[cell_idx1]->obj_id;
+        int obj_id2 = cells[cell_idx2]->obj_id;
+        int obj_size1 = controller->OBJECTS[obj_id1].size;
+        int obj_size2 = controller->OBJECTS[obj_id2].size;
+        int obj_tag1 = controller->OBJECTS[obj_id1].tag;
+        int obj_tag2 = controller->OBJECTS[obj_id2].tag;
+        int part_tag1 = cells[cell_idx1]->part->tag;
+        int part_tag2 = cells[cell_idx2]->part->tag;
+        debug("m2m", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+        
+        _swap_cell(cell_idx1, cell_idx2);
+        gc_pairs.push_back({cell_idx1, cell_idx2});
+        
+    }
+}
 
 
 void Disk::_swap_cell(int cell_idx1, int cell_idx2) {
@@ -210,117 +330,92 @@ void Disk::_swap_cell(int cell_idx1, int cell_idx2) {
 
 
 
+// // 交换大小、tag都能匹配的
+// void Disk::_gc_size_tag(std::vector<std::pair<int, int>>& gc_pairs)
+// {
+//     // 首先尝试进行对象互相交换
+//     for(int i = 1; i <= 17; i++)
+//     {
+//         auto &parts = get_parts(i, 1);
+//         // 遍历每个分区
+//         for(auto &part : parts) 
+//         {
+//             // 使用vector来存储将要删除的对象ID
+//             std::vector<int> to_remove;
+//             // 遍历每个分区的其他对象
+//             for(auto &other_obj : part.other_objs)
+//             {
+//                 assert(controller->OBJECTS[other_obj].tag != part.tag);
 
+//                 // 寻找该对象应在的分区是否有大小对应的该分区的对象
+//                 int this_tag = part.tag;
+//                 int target_tag = controller->OBJECTS[other_obj].tag;
+//                 int obj_size = controller->OBJECTS[other_obj].size;
+//                 bool swapped = false;
 
+//                 if(obj_size > this->K) continue;
 
+//                 for(auto &tmp_part : get_parts(target_tag, 1))
+//                 {
+//                     // 记录要从tmp_part.other_objs中删除的对象
+//                     std::vector<int> tmp_to_remove;
+//                     // 遍历该分区的其他对象
+//                     for(auto &tmp_obj : tmp_part.other_objs)
+//                     {
+//                         int tmp_size = controller->OBJECTS[tmp_obj].size;
+//                         int tmp_tag = controller->OBJECTS[tmp_obj].tag;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 交换大小、tag都能匹配的
-void Disk::_gc_size_tag(std::vector<std::pair<int, int>>& gc_pairs)
-{
-    // 首先尝试进行对象互相交换
-    for(int i = 1; i <= 17; i++)
-    {
-        auto &parts = get_parts(i, 1);
-        // 遍历每个分区
-        for(auto &part : parts) 
-        {
-            // 使用vector来存储将要删除的对象ID
-            std::vector<int> to_remove;
-            // 遍历每个分区的其他对象
-            for(auto &other_obj : part.other_objs)
-            {
-                assert(controller->OBJECTS[other_obj].tag != part.tag);
-
-                // 寻找该对象应在的分区是否有大小对应的该分区的对象
-                int this_tag = part.tag;
-                int target_tag = controller->OBJECTS[other_obj].tag;
-                int obj_size = controller->OBJECTS[other_obj].size;
-                bool swapped = false;
-
-                if(obj_size > this->K) continue;
-
-                for(auto &tmp_part : get_parts(target_tag, 1))
-                {
-                    // 记录要从tmp_part.other_objs中删除的对象
-                    std::vector<int> tmp_to_remove;
-                    // 遍历该分区的其他对象
-                    for(auto &tmp_obj : tmp_part.other_objs)
-                    {
-                        int tmp_size = controller->OBJECTS[tmp_obj].size;
-                        int tmp_tag = controller->OBJECTS[tmp_obj].tag;
-
-                        // 如果该对象大小相同，且属于本分区，则交换
-                        if(tmp_size == obj_size and tmp_tag == this_tag)
-                        {
-                            _swap_obj(other_obj, tmp_obj, gc_pairs);
-                            to_remove.push_back(other_obj);
-                            tmp_to_remove.push_back(tmp_obj);
-                            swapped = true;
-                            this->K-=obj_size;
-                            assert(this->K >= 0);
-                            if(this->K == 0) return;
-                            break;
-                        }
-                    }
-                    // 从tmp_part.other_objs中移除已交换的对象
-                    if(!tmp_to_remove.empty()) {
-                        for(auto obj_id : tmp_to_remove) {
-                            tmp_part.other_objs.erase(
-                                std::remove(tmp_part.other_objs.begin(), tmp_part.other_objs.end(), obj_id), 
-                                tmp_part.other_objs.end()
-                            );
-                        }
-                    }
-                    if(swapped) break;
-                }
-                if(swapped) continue;
-            }
-            // 从part.other_objs中移除已交换的对象
-            for(auto obj_id : to_remove) {
-                part.other_objs.erase(
-                    std::remove(part.other_objs.begin(), part.other_objs.end(), obj_id), 
-                    part.other_objs.end()
-                );
-            }
-        }
-    }
-}
-void Disk::_swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs)
-{
-    assert(controller->OBJECTS[obj_idx1].size == controller->OBJECTS[obj_idx2].size);
-    assert(controller->OBJECTS[obj_idx1].replicas[0].first == this->id);
-    assert(controller->OBJECTS[obj_idx2].replicas[0].first == this->id);
-    // 交换两个对象的单元格
-    for(int i = 0; i < controller->OBJECTS[obj_idx1].replicas[0].second.size(); ++i)
-    {
-        assert(cells[controller->OBJECTS[obj_idx1].replicas[0].second[i]]->obj_id == obj_idx1);
-        assert(cells[controller->OBJECTS[obj_idx2].replicas[0].second[i]]->obj_id == obj_idx2);
+//                         // 如果该对象大小相同，且属于本分区，则交换
+//                         if(tmp_size == obj_size and tmp_tag == this_tag)
+//                         {
+//                             _swap_obj(other_obj, tmp_obj, gc_pairs);
+//                             to_remove.push_back(other_obj);
+//                             tmp_to_remove.push_back(tmp_obj);
+//                             swapped = true;
+//                             this->K-=obj_size;
+//                             assert(this->K >= 0);
+//                             if(this->K == 0) return;
+//                             break;
+//                         }
+//                     }
+//                     // 从tmp_part.other_objs中移除已交换的对象
+//                     if(!tmp_to_remove.empty()) {
+//                         for(auto obj_id : tmp_to_remove) {
+//                             tmp_part.other_objs.erase(
+//                                 std::remove(tmp_part.other_objs.begin(), tmp_part.other_objs.end(), obj_id), 
+//                                 tmp_part.other_objs.end()
+//                             );
+//                         }
+//                     }
+//                     if(swapped) break;
+//                 }
+//                 if(swapped) continue;
+//             }
+//             // 从part.other_objs中移除已交换的对象
+//             for(auto obj_id : to_remove) {
+//                 part.other_objs.erase(
+//                     std::remove(part.other_objs.begin(), part.other_objs.end(), obj_id), 
+//                     part.other_objs.end()
+//                 );
+//             }
+//         }
+//     }
+// }
+// void Disk::_swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs)
+// {
+//     assert(controller->OBJECTS[obj_idx1].size == controller->OBJECTS[obj_idx2].size);
+//     assert(controller->OBJECTS[obj_idx1].replicas[0].first == this->id);
+//     assert(controller->OBJECTS[obj_idx2].replicas[0].first == this->id);
+//     // 交换两个对象的单元格
+//     for(int i = 0; i < controller->OBJECTS[obj_idx1].replicas[0].second.size(); ++i)
+//     {
+//         assert(cells[controller->OBJECTS[obj_idx1].replicas[0].second[i]]->obj_id == obj_idx1);
+//         assert(cells[controller->OBJECTS[obj_idx2].replicas[0].second[i]]->obj_id == obj_idx2);
      
-        int cell_idx1 = controller->OBJECTS[obj_idx1].replicas[0].second[i];
-        int cell_idx2 = controller->OBJECTS[obj_idx2].replicas[0].second[i];
+//         int cell_idx1 = controller->OBJECTS[obj_idx1].replicas[0].second[i];
+//         int cell_idx2 = controller->OBJECTS[obj_idx2].replicas[0].second[i];
      
-        _swap_cell(cell_idx1, cell_idx2);
-        gc_pairs.push_back({cell_idx1, cell_idx2});
-    }
-}
+//         _swap_cell(cell_idx1, cell_idx2);
+//         gc_pairs.push_back({cell_idx1, cell_idx2});
+//     }
+// }
