@@ -26,6 +26,8 @@ int get_freq_fine(int tag, int timestamp, int op_type)
 std::vector<int> &get_sorted_read_tag(int timestamp)
 {
     int fine_slice_idx = (timestamp - 1) / FINE_GRANULARITY + 1;
+    assert(fine_slice_idx < SORTED_READ_TAGS.size()+1);
+    if(fine_slice_idx >= SORTED_READ_TAGS.size()) fine_slice_idx = SORTED_READ_TAGS.size()-1;
     return SORTED_READ_TAGS[fine_slice_idx];
 }
 

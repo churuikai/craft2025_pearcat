@@ -163,14 +163,14 @@ private:
     std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
     // 读取单元格
     void _read_cell(int cell_idx, std::vector<int>& completed_reqs);
-    // 交换大小、tag都能匹配的
-    void _gc_size_tag(std::vector<std::pair<int, int>>& gc_pairs);
-    // 交换大小拼接后匹配、tag能匹配的; 是否考虑加入空闲块
+    // 一对多交换; 是否考虑加入空闲块
     void _disk_gc_s2m(std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
     void _part_gc_s2m(Part& part, std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
     // 多对多交换
     void _disk_gc_m2m(std::vector<std::pair<int, int>>& gc_pairs);
     void _part_gc_m2m(Part& part, std::vector<std::pair<int, int>>& gc_pairs);
+    // 分区内部聚拢
+    void _part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs, bool is_split_obj);
     // 交换两个大小相同的对象
     void _swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs);
     // 交换两个单元格
