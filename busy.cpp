@@ -33,17 +33,8 @@ void Controller::add_req(int req_id, int obj_id)
         // 上报丢弃
         over_load_reqs.push_back(req_id);
     }
-    // 后置过滤请求
-    std::vector<int> drop_req_ids = _post_filter_req();
-    for (int req_id : drop_req_ids)
-    {
-        // 删除请求
-        remove_req(req_id);
-        // 上报丢弃
-        over_load_reqs.push_back(req_id);
-    }
-}
 
+}
 
 void Controller::remove_req(int req_id)
 {
@@ -88,7 +79,7 @@ bool Controller::_pre_filter_req(int req_id, int obj_id)
         if (n > 12) break;
         // 计算需要舍弃的请求数量
         // int m = M - 8 - (int)n;
-        int m = M - 7 - (int)n;
+        int m = M - 6.5 - (int)n;
         if (m < 0) m = 0;
         // 从低频到高频依次判断是否舍弃
         for (int j = 0; j < m; ++j)
@@ -130,8 +121,30 @@ bool Controller::_pre_filter_req(int req_id, int obj_id)
 }
 
 
+void Controller::post_filter_req()
+{
+    std::vector<int> drop_req_ids = _post_filter_req();
+    for (int req_id : drop_req_ids)
+    {
+        // 删除请求
+        remove_req(req_id);
+        // 上报丢弃
+        over_load_reqs.push_back(req_id);
+    }
+}
+
 std::vector<int> Controller::_post_filter_req()
 {
     std::vector<int> drop_req_ids;
+    for(int disk_id = 0; disk_id <= N; ++disk_id)
+    {
+        DISKS[disk_id].filter_req(drop_req_ids);
+    }
     return drop_req_ids;
+}
+
+
+void Disk::filter_req(std::vector<int>& drop_req_ids)
+{
+
 }

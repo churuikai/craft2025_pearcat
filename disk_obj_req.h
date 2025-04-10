@@ -149,6 +149,9 @@ public:
 
     std::pair<std::string, std::vector<int>> read(int op_id);
 
+    // 过滤请求
+    void filter_req(std::vector<int>& drop_req_ids);
+
     void _get_consume_token(int start_point, int last_token, int target_point);
 
     std::vector<std::pair<int, int>> gc();

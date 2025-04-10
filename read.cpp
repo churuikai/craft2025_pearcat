@@ -13,12 +13,16 @@ void process_read(Controller &controller)
     scanf("%d", &n_read);
 
     // 添加请求
+
     for (int i = 0; i < n_read; ++i)
     {
         int req_id, obj_id;
         scanf("%d %d", &req_id, &obj_id);
         controller.add_req(req_id, obj_id);
     }
+
+    // 后置请求过滤
+    controller.post_filter_req();
 
     // 处理所有请求
     auto [disk_operations, completed_requests] = controller.read();

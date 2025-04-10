@@ -56,6 +56,9 @@ public:
 
     // 删除请求
     void remove_req(int req_id);
+
+    // 后置请求过滤
+    void post_filter_req();
     
     // 获取磁盘统计信息
     DiskStatsInfo get_disk_stats(int disk_id);
