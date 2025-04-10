@@ -71,6 +71,18 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
                 tag_list.push_back(first_part[i++]);
         }
     }
+    // 把START_TAG和END_TAG移动到最后
+    auto it = std::find(++tag_list.begin(), tag_list.end(), TAG_ORDERS[0][0]);
+    if(it != tag_list.end()) {
+        tag_list.erase(it);
+        tag_list.push_back(TAG_ORDERS[0][0]);
+    }
+    it = std::find(++tag_list.begin(), tag_list.end(), TAG_ORDERS[0][TAG_ORDERS[0].size()-1]); 
+    if(it != tag_list.end()) {
+        tag_list.erase(it);
+        tag_list.push_back(TAG_ORDERS[0][TAG_ORDERS[0].size()-1]);
+    }
+    
 
     tag_list.push_back(17);
     for (int i = 2; i < tag_list.size(); ++i)

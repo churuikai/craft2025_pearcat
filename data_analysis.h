@@ -17,6 +17,8 @@ void process_data_analysis();
 
 // 计算标签顺序
 void compute_tag_order();
+// 计算交替标签顺序
+void compute_alternating_tag_order();
 
 
 // 辅助函数

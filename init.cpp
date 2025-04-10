@@ -18,32 +18,32 @@ void Controller::disk_init() {
     // tag_order = {13, 6, 10, 15, 1,7, 5,8, 9,2, 14,12, 4,16, 3,11}; // official 最高
     // tag_order = {13, 6, 14, 15, 1,7, 5,8, 9,2, 10,12, 4,16, 3,11}; // official
     // tag_order = {13, 11, 14, 16, 1, 12, 5, 2, 9, 8, 10, 7, 4, 15, 3, 6};
-    std::vector<int> tag_order = {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
+    // std::vector<int> tag_order = {1, 4, 13, 7, 12, 9, 3, 16, 6, 14, 10, 8, 11, 2, 5, 15};
     // {1, 6, 4, 14, 13, 10, 7, 8, 12, 11, 9, 2, 3, 5, 16, 15},
     // {1, 15, 4, 5, 13, 2, 7, 11, 12, 8, 9, 10, 3, 14, 16, 6},
-    TAG_ORDERS = {
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        // {1, 6, 4, 10, 15, 8, 2, 14, 13, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
-        {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+    // TAG_ORDERS = {
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+    //     {16, 6, 14, 13, 12, 3, 8, 10, 9, 4, 7, 11, 5, 2, 15, 1},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
+        // {1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5},
 
-    };
+    // };
 
     info("实际磁盘标签顺序==============================================");
     for(int disk_id=0; disk_id<N; ++disk_id)
@@ -149,7 +149,12 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     int pointer_temp = 1;
     for (int tag_id : tag_order) 
     {
-        int tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]) - 1;
+        assert(not IS_PART_BY_SIZE);
+        int tag_id_end;
+        if(tag_id == tag_order[0] or tag_id == tag_order[tag_order.size()-1]) 
+            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]*1.5) - 1;
+        else
+            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) 
         {
@@ -171,6 +176,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     }
 
     // 冗余区
+    assert(data_size1 - pointer_temp + 1 >= 0);
     auto& dynamic_tables1 = get_parts(17, 1);
     dynamic_tables1.push_back(Part(pointer_temp, data_size1, data_size1 - pointer_temp + 1, pointer_temp, 17, 1));
     pointer_temp = dynamic_tables1.back().end + 1;
@@ -207,6 +213,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     }
 
     // 冗余区
+    assert(data_size - pointer_temp + 1 >= 0);
     auto& dynamic_tables2 = get_parts(17, 1);
     dynamic_tables2.push_back(Part(pointer_temp, data_size, data_size - pointer_temp + 1, pointer_temp, 17, 1));
     pointer_temp = dynamic_tables2.back().end + 1;
@@ -246,8 +253,8 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
         auto& back_tables = get_parts(0, 0);
         std::swap(back_tables[0].start, back_tables[0].end);   
 
-        // 数据区间歇反向
-        for(int i = 1; i<=tag_order.size()-1; i+=2) {
+        // 数据区间歇反向, 从第一个开始
+        for(int i = 0; i<tag_order.size(); i+=2) {
             for(int j=1; j<=5; ++j) {
                 for(auto& part : get_parts(tag_order[i], j)) {
                     // part.start, part.end = part.end, part.start;
@@ -256,7 +263,9 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             }
         }
         // 记录标签反向的对象
-        for(int i = 1; i <= tag_order.size()-1; i+=2) {
+        tag_reverse[tag_order[0]] = tag_order[tag_order.size()-1];
+        tag_reverse[tag_order[tag_order.size()-1]] = tag_order[0];
+        for(int i = 2; i < tag_order.size(); i+=2) {
             assert(tag_order[i-1] != 0);
             tag_reverse[tag_order[i-1]] = tag_order[i];
             tag_reverse[tag_order[i]] = tag_order[i-1];
