@@ -147,8 +147,6 @@ public:
 
     std::vector<int> write(int obj_id, const std::vector<int> &units, int tag, Part* part);
 
-    void add_req(int req_id, const std::vector<int> &cells_idx);
-
     std::pair<std::string, std::vector<int>> read(int op_id);
 
     void _get_consume_token(int start_point, int last_token, int target_point);
@@ -215,4 +213,5 @@ public:
     Int3Set remain_units;
     int timestamp;
     void update(int req_id, Object& obj, int timestamp);
+    void remove(){obj_id = 0; remain_units.clear(); timestamp = 0;}
 };

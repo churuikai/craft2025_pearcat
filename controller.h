@@ -53,6 +53,9 @@ public:
 
     // 添加请求
     void add_req(int req_id, int obj_id);
+
+    // 删除请求
+    void remove_req(int req_id);
     
     // 获取磁盘统计信息
     DiskStatsInfo get_disk_stats(int disk_id);
@@ -62,5 +65,12 @@ private:
 
     // 获取磁盘和对应分区
     std::vector<std::pair<int, Part*>> _get_disk(int obj_size, int tag);
+
+    // 前置请求拦截, 返回是否拦截该请求
+    bool _pre_filter_req(int req_id, int obj_id);
+
+    // 后置请求过滤, 返回需要丢弃的请求id
+    std::vector<int> _post_filter_req();
+
 };
 
