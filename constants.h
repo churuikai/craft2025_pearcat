@@ -8,11 +8,14 @@ inline float G_float;
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
 inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
-inline const float DATA_COMPRESSION = 0.83; // 数据压缩系数 0-1
+inline const float DATA_COMPRESSION = 0.815; // 数据压缩系数 0-1
 
 //是否间隔反向
 inline const int IS_INTERVAL_REVERSE = 1; // 0-1
 
+inline const int IS_EXTEND = 1;
+
+inline const int START_TAG = 16;
 // 动态分区策略
 inline const int BLOCK_SIZE = 0;  // 0 表示关闭
 
@@ -33,10 +36,6 @@ inline const int REP_NUM = 3;
 inline const int EXTRA_TIME = 105;
 inline const int MAX_G = 1000;
 
-// inline const int START_TAG = 16;
-// inline const int END_TAG = 1;
-
-
 // 负载系数
 inline const float LOAD_COEFFICIENT = 0.82*1.599818022273934e-05;
 
@@ -47,6 +46,7 @@ inline const std::vector<double> TAG_SIZE_RATE = {0,
 0.04382, 0.03351, 0.08671, 0.03259, 0.02644, 0.06361, 0.03313, 0.07751, 0.10603, 0.10348, 0.10236, 0.03677, 0.04107, 0.08086, 0.03159, 0.10052};
 // 平均
 // 0.03876, 0.03247, 0.09164, 0.03058, 0.02741, 0.06192, 0.02994, 0.08011, 0.11053, 0.10182, 0.11233, 0.03517, 0.03835, 0.08068, 0.03041, 0.09789};
+
 
 inline const std::vector<std::vector<double>> TAG_SIZE_DB = {
 {}, 
@@ -66,4 +66,5 @@ inline const std::vector<std::vector<double>> TAG_SIZE_DB = {
  {0.34933, 0.24497, 0.23381, 0.12388, 0.04799}, 
  {0.3765, 0.23795, 0.21485, 0.12148, 0.04919}, 
  {0.3465, 0.24356, 0.23483, 0.12729, 0.04779}
+
 };

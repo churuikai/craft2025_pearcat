@@ -182,7 +182,8 @@ void compute_tag_order()
         }
     }
     // debug(max_read_tag);
-    std::vector<int> tag_order = {max_read_tag};
+    // std::vector<int> tag_order = {max_read_tag};
+    std::vector<int> tag_order = {START_TAG};
     
     // 按读频率曲线最相似排列
     while (tag_order.size() < static_cast<size_t>(M)) {

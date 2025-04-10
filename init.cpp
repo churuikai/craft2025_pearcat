@@ -104,7 +104,7 @@ void Controller::disk_init() {
 // Disk::init的实现
 void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<double>& tag_size_rate, const std::vector<std::vector<double>>& tag_size_db) {
     // 预分配所有可能的req_pos空间
-    req_pos.reserve(300000);
+    // req_pos.reserve(300000);
     this->size = size;
     
     // 分配cells内存
@@ -151,7 +151,7 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     {
         assert(not IS_PART_BY_SIZE);
         int tag_id_end;
-        if(tag_id == tag_order[0] or tag_id == tag_order[tag_order.size()-1]) 
+        if((tag_id == tag_order[0] or tag_id == tag_order[tag_order.size()-1]) and IS_EXTEND) 
             tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]*1.5) - 1;
         else
             tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]) - 1;
@@ -191,7 +191,11 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     pointer_temp = 1+data_size1;
     for (int tag_id : tag_order) 
     {
-        int tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]) - 1;
+        int tag_id_end;
+        if((tag_id == tag_order[0] or tag_id == tag_order[tag_order.size()-1]) and IS_EXTEND) 
+            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]*1.5) - 1;
+        else
+            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) 
         {
@@ -263,14 +267,26 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
             }
         }
         // 记录标签反向的对象
-        tag_reverse[tag_order[0]] = tag_order[tag_order.size()-1];
-        tag_reverse[tag_order[tag_order.size()-1]] = tag_order[0];
-        for(int i = 2; i < tag_order.size(); i+=2) {
+        if(IS_EXTEND)
+        {
+            tag_reverse[tag_order[0]] = tag_order[tag_order.size()-1];
+            tag_reverse[tag_order[tag_order.size()-1]] = tag_order[0];
+            for(int i = 2; i < tag_order.size(); i+=2) 
+            {
+                assert(tag_order[i-1] != 0);
+                tag_reverse[tag_order[i-1]] = tag_order[i];
+                tag_reverse[tag_order[i]] = tag_order[i-1];
+            }
+        }
+        else
+        {
+            for(int i = 1; i < tag_order.size(); i+=2) 
+            {
             assert(tag_order[i-1] != 0);
             tag_reverse[tag_order[i-1]] = tag_order[i];
             tag_reverse[tag_order[i]] = tag_order[i-1];
+            }
         }
-
         // 冗余区反向
         for(auto& part : get_parts(17, 1)) {
             std::swap(part.start, part.end);
