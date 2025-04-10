@@ -151,7 +151,7 @@ std::pair<std::string, std::vector<int>> Disk::read(int op_id)
 
     int start = _get_best_start(op_id);
 
-    if (start == -1)
+    if (start == -1 or ( controller->timestamp >= 84300 and TANKLAB))
     {
         return {"#", std::vector<int>()};
     }

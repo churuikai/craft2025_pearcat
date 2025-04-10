@@ -27,4 +27,4 @@ cd ..
 echo "构建成功！"
 
 # 运行Python脚本
-python run/run.py run/interactor run/sample_practice.in ./code_craft 
+python run/run.py run/interactor run/sample_practice.in ./code_craft

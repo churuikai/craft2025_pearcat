@@ -2,6 +2,7 @@
 #include "io.h"
 #include "controller.h"
 #include "disk_obj_req.h"
+#include "data_analysis.h"
 
 #include <iostream>
 #include <algorithm>
@@ -48,10 +49,16 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
     int op_start = (write_count / cycle_op) + 1;
 
     // 优先选择对应tag对应size分区有空闲空间的磁盘
-    std::vector<int> tag_list = {tag, -1, 1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5};
+    // std::vector<int> tag_list = {tag, -1, 1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5};
+    // int WRITE_START = 11;
+    std::vector<int> tag_list = {tag, -1, WRITE_START};
+    // tag_list.insert(tag_list.end(), TAG_ORDERS[0].begin(), TAG_ORDERS[0].end());
+    std::vector<int> tag_list_tmp = get_similar_tag_sequence(timestamp, WRITE_START, 2);
+    tag_list.insert(tag_list.end(), tag_list_tmp.begin(), tag_list_tmp.end());
+
 
     int strategy = 2;
-    if(strategy == 1) {
+    if(strategy == 2) {
         // 策略2 将索引2到tag_list[idx]=tag之间的内容移动到最后面
         auto it = std::find(tag_list.begin() + 2, tag_list.end(), tag);
         std::rotate(tag_list.begin() + 2, it+1, tag_list.end());
@@ -71,18 +78,22 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
                 tag_list.push_back(first_part[i++]);
         }
     }
+    else{}
+
     // 把START_TAG和END_TAG移动到最后
     if(IS_EXTEND) 
     {
         auto it = std::find(++tag_list.begin(), tag_list.end(), TAG_ORDERS[0][0]);
         if(it != tag_list.end()) {
-            tag_list.erase(it);
-            tag_list.push_back(TAG_ORDERS[0][0]);
+            // tag_list.erase(it);
+            // tag_list.push_back(TAG_ORDERS[0][0]);
+            // tag_list.insert(tag_list.begin()+2, TAG_ORDERS[0][0]);
         }
         it = std::find(++tag_list.begin(), tag_list.end(), TAG_ORDERS[0][TAG_ORDERS[0].size()-1]); 
         if(it != tag_list.end()) {
-            tag_list.erase(it);
-            tag_list.push_back(TAG_ORDERS[0][TAG_ORDERS[0].size()-1]);
+            // tag_list.erase(it);
+            // tag_list.push_back(TAG_ORDERS[0][TAG_ORDERS[0].size()-1]);
+            // tag_list.insert(tag_list.begin()+2, TAG_ORDERS[0][TAG_ORDERS[0].size()-1]);
         }
     }
 
@@ -94,12 +105,12 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
             tag_list[i] = 0;
         }
     }
+
     std::vector<int> size_list = {obj_size, 1, 2, 3, 4, 5};
     size_list[obj_size] = 0;
     
     // 数据区交替写入进行
     std::vector<int> op_list = op_start % 2 == 0 ? std::vector<int>{0, 1} : std::vector<int>{1, 0};
-
 
     // 先寻找能够匹配空闲块大小的的同tag区域
 
@@ -258,6 +269,9 @@ std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag,
     {
         // 判断是否反向写入
         bool is_reverse = tag == part->tag ? part->start > part->end : part->start < part->end;
+        if(part->tag == TAG_ORDERS[0][0] or part->tag == TAG_ORDERS[0][TAG_ORDERS[0].size()-1]) {
+            is_reverse = part->start > part->end;
+        }
         int start = std::min(part->start, part->end);
         int end = std::max(part->start, part->end);
         

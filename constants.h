@@ -8,16 +8,17 @@ inline float G_float;
 //参数
 inline const int BACK_NUM = 2; // 备份区数量 0-2
 inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
-inline const float DATA_COMPRESSION = 0.815; // 数据压缩系数 0-1
+inline const float DATA_COMPRESSION = 0.82; // 数据压缩系数 0-1
 
 //是否间隔反向
 inline const int IS_INTERVAL_REVERSE = 1; // 0-1
 
 inline const int IS_EXTEND = 1;
 
-inline const int START_TAG = 16;
-// 动态分区策略
-inline const int BLOCK_SIZE = 0;  // 0 表示关闭
+inline int const START_TAG = 2;
+inline int const WRITE_START = 11;
+// 藏分
+inline const bool TANKLAB = false;
 
 // inline int write_count = 1;
 
@@ -41,9 +42,9 @@ inline const float LOAD_COEFFICIENT = 0.82*1.599818022273934e-05;
 
 inline std::vector<std::vector<int>> TAG_ORDERS;
 
-inline const std::vector<double> TAG_SIZE_RATE = {0, 
+inline std::vector<double> TAG_SIZE_RATE = {0, 
 // 最大
-0.04382, 0.03351, 0.08671, 0.03259, 0.02644, 0.06361, 0.03313, 0.07751, 0.10603, 0.10348, 0.10236, 0.03677, 0.04107, 0.08086, 0.03159, 0.10052};
+0.04382*0.95, 0.03351, 0.08671, 0.03259, 0.02644, 0.06361, 0.03313, 0.07751, 0.10603, 0.10348, 0.10236, 0.03677, 0.04107, 0.08086, 0.03159, 0.10052};
 // 平均
 // 0.03876, 0.03247, 0.09164, 0.03058, 0.02741, 0.06192, 0.02994, 0.08011, 0.11053, 0.10182, 0.11233, 0.03517, 0.03835, 0.08068, 0.03041, 0.09789};
 

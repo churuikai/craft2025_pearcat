@@ -15,7 +15,6 @@ std::vector<std::vector<int>> SORTED_READ_TAGS;      // [timestamp][tag_index]�
 
 // 定义对象数量数据结构
 std::vector<std::vector<int>> OBJ_COUNT;             // [tag][slice_idx]粗粒度对象数量
-std::vector<std::vector<int>> OBJ_COUNT_FINE;        // [tag][fine_slice_idx]细粒度对象数量
 
 // 细粒度的频率获取函数 （op_type: 0删除，1写入，2读取）
 int get_freq_fine(int tag, int timestamp, int op_type)
@@ -34,13 +33,6 @@ std::vector<int> &get_sorted_read_tag(int timestamp)
     return SORTED_READ_TAGS[fine_slice_idx];
 }
 
-// 获取细粒度对象数量函数
-int get_obj_count_fine(int tag, int timestamp)
-{
-    int fine_slice_idx = (timestamp - 1) / FINE_GRANULARITY + 1;
-    return OBJ_COUNT_FINE[tag][fine_slice_idx];
-}
-
 void process_data_analysis()
 {
 
@@ -53,7 +45,6 @@ void process_data_analysis()
     
     // 初始化对象数量数据结构
     OBJ_COUNT.resize(MAX_TAG_NUM + 1, std::vector<int>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, 0));
-    OBJ_COUNT_FINE.resize(MAX_TAG_NUM + 1, std::vector<int>(fine_slices, 0));
 
     // 读取删除频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
@@ -132,16 +123,6 @@ void process_data_analysis()
         }
     }
     
-    // 计算细粒度对象数量
-    for (int tag_id = 1; tag_id <= M; ++tag_id) {
-        int cumulative_count = 0;
-        for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx) {
-            // 累加写入数量并减去删除数量
-            cumulative_count += FRE_FINE[tag_id][fine_idx][1] - FRE_FINE[tag_id][fine_idx][0];
-            OBJ_COUNT_FINE[tag_id][fine_idx] = cumulative_count;
-        }
-    }
-
     // 预计算每个时间点的排序标签
     SORTED_READ_TAGS.resize(fine_slices);
     for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx)
@@ -183,6 +164,7 @@ void compute_tag_order()
     }
     // debug(max_read_tag);
     // std::vector<int> tag_order = {max_read_tag};
+    // START_TAG = 1;
     std::vector<int> tag_order = {START_TAG};
     
     // 按读频率曲线最相似排列
@@ -273,127 +255,63 @@ double __compute_similarity(const std::vector<double> &curve1, const std::vector
     return 1.0 - cosine_similarity;
 }
 
-// 计算对象数量振幅（最大值与平均值的差别）
-double __compute_obj_count_amplitude(int tag_id)
+
+// 获取与指定标签读取频率相似的标签序列
+// time: 当前时间点
+// tag: 参考标签
+// mode: 相似度计算模式 1:当前时间 2:全部时间 3:当前时间及以后
+// 返回按相似度排序的标签序列（不包含参考标签本身）
+std::vector<int> get_similar_tag_sequence(int time, int tag, int mode) 
 {
-    std::vector<double> obj_count_curve;
-    int fine_slices = (T - 1) / FINE_GRANULARITY + 2;
+    std::vector<int> result;
+    std::vector<std::pair<int, double>> similarities;
     
-    // 收集对象数量曲线
-    for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx) {
-        obj_count_curve.push_back(OBJ_COUNT_FINE[tag_id][fine_idx]);
+    // 计算时间范围
+    int start_slice = 1;
+    int end_slice = (T - 1) / FRE_PER_SLICING + 1;
+    
+    if (mode == 1) {
+        // 当前时间的相似度
+        int current_slice = (time - 1) / FRE_PER_SLICING + 1;
+        start_slice = current_slice;
+        end_slice = current_slice;
+    } else if (mode == 3) {
+        // 当前时间及以后的相似度
+        start_slice = (time - 1) / FRE_PER_SLICING + 1;
     }
     
-    // 计算平均值
-    double sum = std::accumulate(obj_count_curve.begin(), obj_count_curve.end(), 0.0);
-    double avg = sum / obj_count_curve.size();
+    // 获取参考标签的读取频率曲线
+    std::vector<double> ref_curve;
+    for (int i = start_slice; i <= end_slice; ++i) {
+        ref_curve.push_back(FRE[tag][i][2]); // 2表示读取操作
+    }
     
-    // 找最大值
-    double max_val = *std::max_element(obj_count_curve.begin(), obj_count_curve.end());
+    // 计算每个标签与参考标签的相似度
+    for (int other_tag = 1; other_tag <= M; ++other_tag) {
+        if (other_tag == tag) continue; // 排除参考标签自身
+        
+        std::vector<double> other_curve;
+        for (int i = start_slice; i <= end_slice; ++i) {
+            other_curve.push_back(FRE[other_tag][i][2]);
+        }
+        
+        // 计算相似度，对两条曲线都进行归一化
+        double similarity = __compute_similarity(ref_curve, other_curve, true, true);
+        similarities.push_back({other_tag, similarity});
+    }
     
-    // 返回最大值与平均值的差
-    return max_val - avg;
+    // 按相似度排序（升序，因为值越小表示越相似）
+    std::sort(similarities.begin(), similarities.end(), 
+              [](const auto& a, const auto& b) { return a.second < b.second; });
+    
+    // 提取排序后的标签
+    for (const auto& pair : similarities) {
+        result.push_back(pair.first);
+    }
+    
+    return result;
 }
 
-// 计算交替标签顺序
-void compute_alternating_tag_order()
-{
-    std::vector<int> tag_order;
-    std::vector<bool> tag_used(M + 1, false);
-    
-    // 步骤1：首先找到对象数量最大值和平均值差别最大的对象
-    double max_amplitude = -1;
-    int first_tag = 0;
-    
-    for (int tag_id = 1; tag_id <= M; ++tag_id) {
-        double amplitude = __compute_obj_count_amplitude(tag_id);
-        if (amplitude > max_amplitude) {
-            max_amplitude = amplitude;
-            first_tag = tag_id;
-        }
-    }
-    
-    tag_order.push_back(first_tag);
-    tag_used[first_tag] = true;
-    
-    // 交替寻找读取频率最相似和对象数量曲线差别最大的标签
-    while (tag_order.size() < static_cast<size_t>(M)) {
-        int last_tag = tag_order.back();
-        int next_tag = 0;
-        
-        // 判断当前是奇数还是偶数轮，决定使用哪种选择标准
-        bool is_even_iteration = (tag_order.size() % 2 == 1); // 标签数为奇数时，进行的是偶数轮
-        
-        if (is_even_iteration) {
-            // 偶数轮：找读取频率最相似的标签
-            double min_diff_sum = std::numeric_limits<double>::infinity();
-            
-            // 获取上一个标签的读取频率曲线
-            std::vector<double> fre_tmp_old;
-            for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
-                fre_tmp_old.push_back(FRE[last_tag][i][2]); // 读取频率
-            }
-            
-            for (int tag_id = 1; tag_id <= M; ++tag_id) {
-                if (tag_used[tag_id]) continue;
-                
-                // 获取待比较标签的读取频率曲线
-                std::vector<double> fre_tmp_new;
-                for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i) {
-                    fre_tmp_new.push_back(FRE[tag_id][i][2]); // 读取频率
-                }
-                
-                // 计算相似度，值越小表示越相似
-                double diff_sum = __compute_similarity(fre_tmp_old, fre_tmp_new, true, true);
-                
-                if (diff_sum < min_diff_sum) {
-                    min_diff_sum = diff_sum;
-                    next_tag = tag_id;
-                }
-            }
-        }
-        else {
-            // 奇数轮：找对象数量曲线差别最大的标签
-            double max_diff_sum = -1.0;
-            
-            // 获取上一个标签的对象数量曲线
-            std::vector<double> obj_count_old;
-            int fine_slices = (T - 1) / FINE_GRANULARITY + 2;
-            for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx) {
-                obj_count_old.push_back(OBJ_COUNT_FINE[last_tag][fine_idx]);
-            }
-            
-            for (int tag_id = 1; tag_id <= M; ++tag_id) {
-                if (tag_used[tag_id]) continue;
-                
-                // 获取待比较标签的对象数量曲线
-                std::vector<double> obj_count_new;
-                for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx) {
-                    obj_count_new.push_back(OBJ_COUNT_FINE[tag_id][fine_idx]);
-                }
-                
-                // 计算差异，我们使用1减去相似度，值越大表示差异越大
-                double diff_sum = 2.0 - __compute_similarity(obj_count_old, obj_count_new, true, true);
-                
-                if (diff_sum > max_diff_sum) {
-                    max_diff_sum = diff_sum;
-                    next_tag = tag_id;
-                }
-            }
-        }
-        
-        tag_order.push_back(next_tag);
-        tag_used[next_tag] = true;
-    }
-    
-    info("交替标签顺序计算完成，第一个标签为对象数量振幅最大的标签：==========================");
-    info(tag_order);
-    
-    // 使用计算出的标签顺序更新控制器
-    TAG_ORDERS.resize(N);
-    for (int i = 0; i < N; ++i) {
-        TAG_ORDERS[i] = tag_order;
-    }
-}
+
 
 
