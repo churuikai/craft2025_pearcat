@@ -8,7 +8,7 @@ void process_gc(Controller &controller)
 
     (void)scanf("%*s%*s");
     printf("GARBAGE COLLECTION\n");
-    debug("time", controller.timestamp, "gc");
+    // debug("time", controller.timestamp, "gc");
 
     for (int i = 1; i <= N; i++)
     {
@@ -48,7 +48,7 @@ std::vector<std::pair<int, int>> Disk::gc() {
             }
         }
     }
-    debug("disk", this->id, "--------------------------");
+    // debug("disk", this->id, "--------------------------");
     // 如果K还有剩余，尝试一对多组合排列交换
     if(this->K > 0) {
         _disk_gc_s2m(gc_pairs, false);
@@ -100,7 +100,7 @@ std::vector<std::pair<int, int>> Disk::gc() {
     }
 
     // 打印K
-    debug("剩余 K", this->K);
+    // debug("剩余 K", this->K);
 
 
     return gc_pairs;
@@ -205,7 +205,7 @@ void Disk::_part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs
                         int obj_tag2 = controller->OBJECTS[obj_id2].tag;
                         int part_tag1 = cells[cell_idx1]->part->tag;
                         int part_tag2 = cells[cell_idx2]->part->tag;
-                        debug("inr", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+                        // debug("inr", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
             
                         _swap_cell(candidate_cells[i], candidate_blocks[best_block_idx][i]);
                         gc_pairs.push_back({candidate_cells[i], candidate_blocks[best_block_idx][i]});
@@ -233,7 +233,7 @@ void Disk::_part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs
                             int obj_tag2 = controller->OBJECTS[obj_id2].tag;
                             int part_tag1 = cells[cell_idx1]->part->tag;
                             int part_tag2 = cells[cell_idx2]->part->tag;
-                            debug("inr-split", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+                            // debug("inr-split", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
                 
                             _swap_cell(i, candidate_cells.back());
                             gc_pairs.push_back({i, candidate_cells.back()});
@@ -260,7 +260,7 @@ void Disk::_part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs
                             int obj_tag2 = controller->OBJECTS[obj_id2].tag;
                             int part_tag1 = cells[cell_idx1]->part->tag;
                             int part_tag2 = cells[cell_idx2]->part->tag;
-                            debug("inr-split", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+                            // debug("inr-split", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
                 
                             _swap_cell(i, candidate_cells.back());
                             gc_pairs.push_back({i, candidate_cells.back()});
@@ -283,49 +283,6 @@ void Disk::_part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs
     }
     return;
 
-    // while(end != start)
-    // {
-    //     if(this->K == 0) return;
-    //     assert(cells[end]->part->tag == part.tag);
-    //     // 找末端第一个本区域的obj
-    //     if(cells[end]->obj_id == 0 or controller->OBJECTS[cells[end]->obj_id].tag != part.tag)
-    //     {
-    //         end += is_reverse ? 1 : -1;
-    //         continue;
-    //     }
-    //     else
-    //     {
-    //         bool is_find = false;
-    //         // 从start端开始找空闲块
-    //         for(int i = start; i != end; i += is_reverse ? -1 : 1)
-    //         {
-    //             assert(cells[i]->part->tag == part.tag);
-    //             if((cells[i]->obj_id == 0 or controller->OBJECTS[cells[i]->obj_id].tag != part.tag) and this->K>=1)
-    //             {
-    //                 int cell_idx1 = end;
-    //                 int cell_idx2 = i;
-    //                 int obj_id1 = cells[cell_idx1]->obj_id;
-    //                 int obj_id2 = cells[cell_idx2]->obj_id;
-    //                 int obj_size1 = controller->OBJECTS[obj_id1].size;
-    //                 int obj_size2 = controller->OBJECTS[obj_id2].size;
-    //                 int obj_tag1 = controller->OBJECTS[obj_id1].tag;
-    //                 int obj_tag2 = controller->OBJECTS[obj_id2].tag;
-    //                 int part_tag1 = cells[cell_idx1]->part->tag;
-    //                 int part_tag2 = cells[cell_idx2]->part->tag;
-    //                 debug("inr", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
-         
-    //                 _swap_cell(end, i);
-    //                 gc_pairs.push_back({cell_idx1, cell_idx2});
-    //                 this->K -= 1;
-    //                 end += is_reverse ? 1 : -1;
-    //                 is_find = true;
-    //                 break;
-    //             }
-    //         }
-    //         if (!is_find) return;
-    //     }
-
-    // }
 }
 
 

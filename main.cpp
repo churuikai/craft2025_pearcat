@@ -50,7 +50,7 @@ int main() {
 
         // 处理垃圾回收事件, 每1800时间片执行一次
         if (timestamp % 1800 == 0) {
-            debug("timestamp: ", timestamp);
+            // debug("timestamp: ", timestamp);
             process_gc(controller);
 
         }
@@ -58,6 +58,9 @@ int main() {
         // 验证数据结构
         if (timestamp % 10000 == 0) {
             process_verify(controller);
+        }
+        if (timestamp % 360 == 0) {
+            info("avg_wait_time: ", controller.DISKS[1].get_avg_wait_time());
         }
     }
 

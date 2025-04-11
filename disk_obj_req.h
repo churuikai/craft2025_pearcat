@@ -5,6 +5,7 @@
 #include <unordered_set>
 #include <cassert>
 #include "tools.h"
+#include <deque>
 
 // 前向声明
 class Controller;
@@ -133,6 +134,15 @@ public:
     //标签间接反向, 该标签对应的标签
     int tag_reverse[MAX_TAG_NUM+1] = {0};
 
+    // 记录最近请求的等待时间
+    std::deque<int> recent_wait_times;
+    // 最近请求的总等待时间
+    long long total_wait_time = 0;
+    // 最近请求的平均等待时间
+    float avg_wait_time = 0.0f;
+    // 记录的请求数量上限
+    static const int MAX_RECENT_REQS = 66;
+
     // 分片存储策略
     // int tag_free_count[MAX_TAG_NUM+1] = {0};
 
@@ -155,6 +165,14 @@ public:
     void _get_consume_token(int start_point, int last_token, int target_point);
 
     std::vector<std::pair<int, int>> gc();
+
+    // 更新请求等待时间统计
+    void update_wait_time_stats(int req_id, int current_timestamp);
+
+    // 获取平均等待时间
+    float get_avg_wait_time() const { return avg_wait_time; }
+
+    float calcu_win_influence(int req_id, int obj_id, bool is_pre);
 
 
 private:

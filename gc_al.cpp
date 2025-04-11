@@ -240,7 +240,7 @@ void Disk::_swap_s2m(int single_obj_idx, const std::vector<int>& multi_obj_idxs,
         int obj_tag2 = controller->OBJECTS[obj_id2].tag;
         int part_tag1 = cells[cell_idx1]->part->tag;
         int part_tag2 = cells[cell_idx2]->part->tag;
-        debug("s2m", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+        // debug("s2m", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
         
         _swap_cell(single_obj_cells[i], multi_obj_cells[i]);
         gc_pairs.push_back({single_obj_cells[i], multi_obj_cells[i]});
@@ -279,7 +279,7 @@ void Disk::_swap_m2m(const std::vector<int>& matched_objs1, const std::vector<in
         int obj_tag2 = controller->OBJECTS[obj_id2].tag;
         int part_tag1 = cells[cell_idx1]->part->tag;
         int part_tag2 = cells[cell_idx2]->part->tag;
-        debug("m2m", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
+        // debug("m2m", "id", obj_id1,"tag",obj_tag1, "size", obj_size1, "cell", cell_idx1, "part", part_tag1, "---", "id", obj_id2, "tag", obj_tag2, "size", obj_size2, "cell", cell_idx2, "part", part_tag2);
         
         _swap_cell(cell_idx1, cell_idx2);
         gc_pairs.push_back({cell_idx1, cell_idx2});

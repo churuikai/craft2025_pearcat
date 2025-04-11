@@ -13,11 +13,20 @@ void process_read(Controller &controller)
     scanf("%d", &n_read);
 
     // 添加请求
-
+    std::vector<std::pair<int, int>> reqs;
     for (int i = 0; i < n_read; ++i)
     {
         int req_id, obj_id;
         scanf("%d %d", &req_id, &obj_id);
+        reqs.push_back({req_id, obj_id});
+    }
+
+    // 前置过滤
+    controller.pre_filter_req(reqs);
+
+    // 添加请求
+    for(auto [req_id, obj_id] : reqs)
+    {
         controller.add_req(req_id, obj_id);
     }
 
@@ -40,6 +49,27 @@ void process_read(Controller &controller)
         printf("%d\n", req_id);
     }
     fflush(stdout);
+
+    // 计算磁盘平均等待时间
+    float avg_wait_time = 0;
+    for(int disk_id = 1; disk_id <= N; ++disk_id)
+    {
+        avg_wait_time += controller.DISKS[disk_id].get_avg_wait_time();
+    }
+    avg_wait_time /= N;
+    // 计算磁盘平均请求数量
+    float avg_req_num = 0;
+    for(int disk_id = 1; disk_id <= N; ++disk_id)
+    {
+        avg_req_num += controller.DISKS[disk_id].req_pos.size();
+    }
+    avg_req_num /= N;
+    // 计算磁盘平均完成的请求
+    float avg_completed_req_num = 0;
+
+    avg_completed_req_num  = completed_requests.size()*1.0/N;
+
+    debug(controller.timestamp, avg_req_num, avg_wait_time, avg_completed_req_num);
 }
 
 
@@ -106,7 +136,17 @@ int Disk::_get_best_start(int op_id)
     if (req_pos.size() == 1)
     {
         if (req_pos.begin()->second[0] >= part_start and req_pos.begin()->second[0] <= part_end)
-            return req_pos.begin()->second[0];
+        {
+            int min_cell_idx = req_pos.begin()->second[0];
+            for(int cell_idx : req_pos.begin()->second)
+            {
+                if(cell_idx < min_cell_idx)
+                {
+                    min_cell_idx = cell_idx;
+                }
+            }
+            return min_cell_idx;
+        }
         else
             return -1;
     }
@@ -204,7 +244,6 @@ void Disk::_read_cell(int cell_idx, std::vector<int>& completed_reqs)
         return;
     }
     
-
     // 检查req是否完成 更新完成的 req
     for (int req_id : cells[cell_idx]->req_ids)
     {
@@ -214,6 +253,8 @@ void Disk::_read_cell(int cell_idx, std::vector<int>& completed_reqs)
         if (controller->REQS[req_id % LEN_REQ].remain_units.empty())
         {
             completed_reqs.push_back(req_id);
+            // 更新等待时间统计
+            update_wait_time_stats(req_id, controller->timestamp);
             // 更新对象
             controller->OBJECTS[cells[cell_idx]->obj_id].req_ids.erase(req_id);
             // 更新磁盘
@@ -395,3 +436,27 @@ void Req::update(int req_id, Object &obj, int timestamp)
 //         check_point = check_point % size + 1;
 //     }
 // }
+
+// 更新请求等待时间统计
+void Disk::update_wait_time_stats(int req_id, int current_timestamp)
+{
+    // 获取请求创建时间
+    int req_timestamp = controller->REQS[req_id % LEN_REQ].timestamp;
+    
+    // 计算等待时间
+    int wait_time = current_timestamp - req_timestamp;
+    
+    // 先加入新的等待时间到总和
+    total_wait_time += wait_time;
+    recent_wait_times.push_back(wait_time);
+    
+    // 如果超过最大数量限制，移除最旧的记录并从总和中减去
+    if (recent_wait_times.size() > MAX_RECENT_REQS) 
+    {
+        total_wait_time -= recent_wait_times.front();
+        recent_wait_times.pop_front();
+    }
+    
+    // 计算平均等待时间
+    avg_wait_time = static_cast<float>(total_wait_time) / recent_wait_times.size();
+}

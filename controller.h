@@ -59,6 +59,9 @@ public:
 
     // 后置请求过滤
     void post_filter_req();
+
+    // 前置请求过滤
+    void pre_filter_req(std::vector<std::pair<int, int>> &reqs);
     
     // 获取磁盘统计信息
     DiskStatsInfo get_disk_stats(int disk_id);
