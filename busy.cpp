@@ -61,12 +61,26 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
     std::vector<int> tag_order(order_tag.size()+1);
 
 
-    // 每个请求是否有邻居
+    // 每个请求周边的请求数量
+
+    std::unordered_map<int, int> req_neighbor_num;
+    // 请求是否有邻居
     std::unordered_map<int, bool> req_is_alone;
 
     for(int i = 0; i < order_tag.size(); ++i)
     {
         tag_order[order_tag[i]] = i;
+    }
+
+    // 即将到来的请求的cell_id-数量
+    std::unordered_map<int, int> new_req_num;
+    for(auto [req_id, obj_id] : reqs)
+    {
+        std::vector<int>& cell_idxs = OBJECTS[obj_id].replicas[0].second;
+        for(int cell_idx : cell_idxs)
+        {
+            new_req_num[cell_idx]++;
+        }
     }
 
     for(auto [req_id, obj_id] : reqs)
@@ -80,31 +94,58 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
         bool is_alone = true;
         // 获取obj邻居
 
+        // 临时集合, 所有邻居
+        std::unordered_set<int> tmp_neighbor_set;
+
         for (auto &cell_idx : cell_idxs)
         {
-            if (not is_alone)
-                break;
+            tmp_neighbor_set.insert(cell_idx);
+
             int prev_cell_idx = cell_idx;
             int next_cell_idx = cell_idx;
             for (int k = 0; k < 6; ++k)
             {
-                prev_cell_idx = prev_cell_idx == 1 ? prev_cell_idx : prev_cell_idx - 1;
-                next_cell_idx = next_cell_idx == size ? next_cell_idx : next_cell_idx + 1;
-                if (disk.cells[prev_cell_idx]->req_ids.size() > 0 or disk.cells[next_cell_idx]->req_ids.size() > 0)
-                {
-                    is_alone = false;
-                    break;
-                }
+                prev_cell_idx = prev_cell_idx == 1 ? 1 : prev_cell_idx - 1;
+                next_cell_idx = next_cell_idx == size ? size : next_cell_idx + 1;
+
+                tmp_neighbor_set.insert(prev_cell_idx);
+                tmp_neighbor_set.insert(next_cell_idx);
             }
         }
-        req_is_alone[req_id] = is_alone and this->OBJECTS[obj_id].req_ids.size() == 0;
+        // req_is_alone[req_id] = is_alone and this->OBJECTS[obj_id].req_ids.size() == 0;
+
+        // 找到邻居身上的请求数量
+        int neighbor_num = 0;
+        int neighbor_num_new = 0;
+        for(int cell_idx : tmp_neighbor_set)
+        {
+            // neighbor_num += new_req_num[cell_idx];
+            neighbor_num += disk.cells[cell_idx]->req_ids.size();
+            neighbor_num_new += new_req_num[cell_idx];
+        }
+        req_neighbor_num[req_id] = neighbor_num;
+        req_neighbor_num[req_id] += neighbor_num_new;
+        assert(neighbor_num >= 0);
+        assert(neighbor_num_new >= cell_idxs.size());
+        if(neighbor_num == 0 )
+        {
+            req_is_alone[req_id] = true;
+        }
+        else{
+            req_is_alone[req_id] = false;
+        }
     }
+
 
     // 给reqs排序, 有邻居在后，其次按请求频率排序，频率低在前
     std::sort(reqs.begin(), reqs.end(), [&](const std::pair<int, int>& a, const std::pair<int, int>& b) {
         bool a_alone = req_is_alone[a.first];
         bool b_alone = req_is_alone[b.first];
         if (a_alone != b_alone) return a_alone;
+        if(req_neighbor_num[a.first] != req_neighbor_num[b.first])
+        {
+            return req_neighbor_num[a.first] < req_neighbor_num[b.first];
+        }
         return tag_order[OBJECTS[a.second].tag] < tag_order[OBJECTS[b.second].tag];
     });
 
@@ -119,27 +160,40 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
     }
     avg_wait_time /= N;
 
-    // float drop_rate;
-    // if(avg_wait_time > 39) drop_rate = 0.35;
-    // else if(avg_wait_time > 35) drop_rate = 0.27;
-    // else if(avg_wait_time > 30) drop_rate = 0.26;
-    // else if(avg_wait_time > 25) drop_rate = 0.25;
-    // else if(avg_wait_time > 23) drop_rate = 0.24;
-    // else if(avg_wait_time > 18) drop_rate = 0.22;
-    // else if(avg_wait_time > 16) drop_rate = 0.2;
-    // else if(avg_wait_time > 15) drop_rate = 0.18;
-    // else if(avg_wait_time > 14) drop_rate = 0.16;
-    // else if(avg_wait_time > 13) drop_rate = 0.14;
-    // else if(avg_wait_time > 11) drop_rate =0.12;
-    // else if(avg_wait_time > 10) drop_rate =0.1;
+    // 计算磁盘总的请求数量
+    int total_req_num = 0;
+    for(int disk_id = 1; disk_id <= N; ++disk_id)
+    {
+        total_req_num += DISKS[disk_id].req_pos.size();
+    }
+
+    // 根据平均等待时间和总请求数量，估算目前平均每个时间片处理多少请求
+    float req_per_time = (total_req_num+reqs.size()) / avg_wait_time;
+
+    // req_per_time  *= 35/avg_wait_time;
+
+    if(avg_wait_time > 39) req_per_time *= 0.9;
+    else if(avg_wait_time > 35) req_per_time *= 0.95;
+    else if(avg_wait_time > 30) req_per_time *= 1.5;
+    else if(avg_wait_time > 25) req_per_time *= 2.5;
+    else if(avg_wait_time > 23) req_per_time *= 3.5;
+    else if(avg_wait_time > 18) req_per_time *= 4.5;
+    else if(avg_wait_time > 16) req_per_time *= 5.5;
+    else if(avg_wait_time > 15) req_per_time *= 6;
+    else if(avg_wait_time > 14) req_per_time *= 7;
+    else if(avg_wait_time > 13) req_per_time *= 8;
+    else if(avg_wait_time > 11) req_per_time *= 9;
+    else req_per_time *= 10;
+
+
     // else drop_rate = 0;
 
     float drop_rate;
-    if(avg_wait_time > 35) drop_rate = 0.3;
-    else if(avg_wait_time > 33) drop_rate = 0.26;
-    else if(avg_wait_time > 30) drop_rate = 0.25;
-    else if(avg_wait_time > 25) drop_rate = 0.24;
-    else if(avg_wait_time > 23) drop_rate = 0.23;
+    if(avg_wait_time > 39) drop_rate = 0.35;
+    else if(avg_wait_time > 35) drop_rate = 0.27;
+    else if(avg_wait_time > 30) drop_rate = 0.26;
+    else if(avg_wait_time > 25) drop_rate = 0.25;
+    else if(avg_wait_time > 23) drop_rate = 0.24;
     else if(avg_wait_time > 18) drop_rate = 0.22;
     else if(avg_wait_time > 16) drop_rate = 0.2;
     else if(avg_wait_time > 15) drop_rate = 0.18;
@@ -162,11 +216,17 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
     else if(avg_wait_time > 10) m-=8;
     else m = 0;
 
+    debug(timestamp, m);
+
     int end_idx = int(reqs.size() * drop_rate);
+    // int end_idx = int(req_per_time);
     for(int i = 0; i < reqs.size(); ++i)
     {
-        // 如果alone，则over
-        if((req_is_alone[reqs[i].first]) and i<end_idx and tag_order[OBJECTS[reqs[i].second].tag] < m)
+        // if(req_neighbor_num[reqs[i].first] < 15 and tag_order[OBJECTS[reqs[i].second].tag] < m)
+        // {
+        //     over_load_reqs.push_back(reqs[i].first);
+        // }
+        if(req_is_alone[reqs[i].first]  and i<end_idx and tag_order[OBJECTS[reqs[i].second].tag] < m)
         {
             over_load_reqs.push_back(reqs[i].first);
         }

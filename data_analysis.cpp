@@ -13,8 +13,20 @@ const int FINE_GRANULARITY = 1800;                    // 细粒度为100时间�
 std::vector<std::vector<std::vector<int>>> FRE_FINE; // [tag][fine_slice_idx][op_type]
 std::vector<std::vector<int>> SORTED_READ_TAGS;      // [timestamp][tag_index]，预计算的排序标签
 
+// token数量
+std::vector<int> TOKEN_NUM; //
+
+
+
 // 定义对象数量数据结构
 std::vector<std::vector<int>> OBJ_COUNT;             // [tag][slice_idx]粗粒度对象数量
+
+int get_token(int timestamp)
+{
+    int slice_idx = (timestamp + FRE_PER_SLICING - 1) / FRE_PER_SLICING;
+    assert(slice_idx < TOKEN_NUM.size() and slice_idx > 0);
+    return TOKEN_NUM[slice_idx];
+}
 
 // 细粒度的频率获取函数 （op_type: 0删除，1写入，2读取）
 int get_freq_fine(int tag, int timestamp, int op_type)
@@ -64,6 +76,12 @@ void process_data_analysis()
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
             (void)scanf("%d", &FRE[tag_id][i][2]);
     }
+
+    // 读取token数量
+    TOKEN_NUM.resize((T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING + 1);
+    for (int i = 1; i <= (T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING; ++i)
+        (void)scanf("%d", &TOKEN_NUM[i]);
+
     // 插值得到细粒度频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {

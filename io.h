@@ -1,13 +1,14 @@
 #pragma once
 #include "controller.h"
+#include "data_analysis.h"
 
 inline void process_timestamp(Controller &controller, int timestamp)
 {
     scanf("%*s%*d");
     // 更新各个磁盘的tokens
     for (int i = 1; i <= N; ++i) {
-        controller.DISKS[i].tokens1 = G;
-        controller.DISKS[i].tokens2 = G;
+        controller.DISKS[i].tokens1 = G + get_token(timestamp);
+        controller.DISKS[i].tokens2 = G + get_token(timestamp);
         controller.DISKS[i].K = k;
     }
     // 同步时间

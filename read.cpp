@@ -69,7 +69,7 @@ void process_read(Controller &controller)
 
     avg_completed_req_num  = completed_requests.size()*1.0/N;
 
-    debug(controller.timestamp, avg_req_num, avg_wait_time, avg_completed_req_num);
+    // debug(controller.timestamp, avg_req_num, avg_wait_time, avg_completed_req_num);
 }
 
 

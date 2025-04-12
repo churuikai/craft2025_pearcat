@@ -4,6 +4,7 @@
 #include <limits>
 #include "debug.h"
 #include "data_analysis.h"
+#include <random>
 
 
 void Controller::disk_init() {
@@ -60,7 +61,7 @@ void Controller::disk_init() {
 
     TAG_SIZE_RATE = {0, 
 // 最大
-0.04382*0.95, 0.03351, 0.08671, 0.03259*0.98, 0.02644, 0.06361, 0.03313, 0.07751*1.02, 0.10603*1.02, 0.10348*1.02, 0.10236, 0.03677*0.98, 0.04107, 0.08086*0.98, 0.03159, 0.10052*1.02};
+0.05369, 0.0625, 0.07024, 0.06187, 0.06496, 0.03706, 0.05793, 0.09764, 0.05306, 0.09258, 0.06063, 0.04831, 0.06799, 0.05039, 0.06893, 0.05224};
 
     // 初始化各个磁盘
     for (int i = 1; i <= N; ++i) {
@@ -108,6 +109,11 @@ void Controller::disk_init() {
 void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<double>& tag_size_rate, const std::vector<std::vector<double>>& tag_size_db) {
     // 预分配所有可能的req_pos空间
     // req_pos.reserve(300000);
+    double range = 0.02;
+    std::random_device rd;
+    std::mt19937 gen(66);
+    std::uniform_real_distribution<> dis(1-range, 1+range);
+
     this->size = size;
     
     // 分配cells内存
@@ -152,12 +158,16 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     int pointer_temp = 1;
     for (int tag_id : tag_order) 
     {
+        // 增加一个随机扰动[0.98-1.02]
+        double random_rate = dis(gen);
+        // double random_rate = 0.98 + (rand() % 5) * 0.01;
+
         assert(not IS_PART_BY_SIZE);
         int tag_id_end;
         if((tag_id == tag_order[0] or tag_id == tag_order[tag_order.size()-1]) and IS_EXTEND) 
-            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]*1.5) - 1;
+            tag_id_end = pointer_temp + static_cast<int>(random_rate* DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]*1.6) - 1;
         else
-            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]) - 1;
+            tag_id_end = pointer_temp + static_cast<int>(random_rate*DATA_COMPRESSION*data_size1 * this_tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) 
         {
@@ -194,11 +204,15 @@ void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<d
     pointer_temp = 1+data_size1;
     for (int tag_id : tag_order) 
     {
+        // 增加一个随机扰动
+        double random_rate = dis(gen);
+
+        // double random_rate = 0.98 + (rand() % 5) * 0.01;
         int tag_id_end;
         if((tag_id == tag_order[0] or tag_id == tag_order[tag_order.size()-1]) and IS_EXTEND) 
-            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]*1.5) - 1;
+            tag_id_end = pointer_temp + static_cast<int>(random_rate*DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]*1.6) - 1;
         else
-            tag_id_end = pointer_temp + static_cast<int>(DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]) - 1;
+            tag_id_end = pointer_temp + static_cast<int>(random_rate*DATA_COMPRESSION*data_size2 * this_tag_size_rate[tag_id]) - 1;
         // 由大到小分配
         if (IS_PART_BY_SIZE) 
         {

@@ -8,6 +8,9 @@ extern std::vector<std::vector<std::vector<int>>> FRE;
 class Controller;
 
 
+// 获取token
+int get_token(int timestamp);
+
 // 函数声明
 // 频率相关函数声明
 // int get_freq(int tag, int timestamp, int op_type); // 获取特定tag在特定时间的频率（op_type: 0删除，1写入，2读取）
