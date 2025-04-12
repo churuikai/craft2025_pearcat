@@ -189,24 +189,24 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
     // else drop_rate = 0;
 
     float drop_rate;
-    if(avg_wait_time > 39) drop_rate = 0.35;
-    else if(avg_wait_time > 35) drop_rate = 0.27;
-    else if(avg_wait_time > 30) drop_rate = 0.26;
-    else if(avg_wait_time > 25) drop_rate = 0.25;
-    else if(avg_wait_time > 23) drop_rate = 0.24;
-    else if(avg_wait_time > 18) drop_rate = 0.22;
-    else if(avg_wait_time > 16) drop_rate = 0.2;
-    else if(avg_wait_time > 15) drop_rate = 0.18;
-    else if(avg_wait_time > 14) drop_rate = 0.16;
-    else if(avg_wait_time > 13) drop_rate = 0.14;
-    else if(avg_wait_time > 11) drop_rate =0.12;
-    else if(avg_wait_time > 10) drop_rate =0.1;
+    if(avg_wait_time > 39) drop_rate = 0.45;
+    else if(avg_wait_time > 35) drop_rate = 0.37;
+    else if(avg_wait_time > 30) drop_rate = 0.36;
+    else if(avg_wait_time > 25) drop_rate = 0.35;
+    else if(avg_wait_time > 23) drop_rate = 0.34;
+    else if(avg_wait_time > 18) drop_rate = 0.32;
+    else if(avg_wait_time > 16) drop_rate = 0.3;
+    else if(avg_wait_time > 15) drop_rate = 0.28;
+    else if(avg_wait_time > 14) drop_rate = 0.26;
+    else if(avg_wait_time > 13) drop_rate = 0.24;
+    else if(avg_wait_time > 11) drop_rate =0.22;
+    else if(avg_wait_time > 10) drop_rate =0.2;
     else drop_rate = 0;
 
 
     int m = 12;
-    if(avg_wait_time > 39) m -= 1;
-    else if(avg_wait_time > 23) m-=2;
+    if(avg_wait_time > 43) m -= 1;
+    else if(avg_wait_time > 29) m-=2;
     else if(avg_wait_time > 18) m-=3;
     else if(avg_wait_time > 16) m-=4;
     else if(avg_wait_time > 15) m-=5;
@@ -226,7 +226,8 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
         // {
         //     over_load_reqs.push_back(reqs[i].first);
         // }
-        if(req_is_alone[reqs[i].first]  and i<end_idx and tag_order[OBJECTS[reqs[i].second].tag] < m)
+        // if(req_is_alone[reqs[i].first]  and i<end_idx and tag_order[OBJECTS[reqs[i].second].tag] < m)
+        if(req_is_alone[reqs[i].first] and tag_order[OBJECTS[reqs[i].second].tag] < m)
         {
             over_load_reqs.push_back(reqs[i].first);
         }

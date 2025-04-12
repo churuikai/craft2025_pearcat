@@ -98,7 +98,7 @@ void Controller::disk_init() {
 void Disk::init(int size, const std::vector<int>& tag_order, const std::vector<double>& tag_size_rate, const std::vector<std::vector<double>>& tag_size_db) {
     // 预分配所有可能的req_pos空间
     // req_pos.reserve(300000);
-    double range = 0.02;
+    double range = 0.00001;
     std::random_device rd;
     std::mt19937 gen(66);
     std::uniform_real_distribution<> dis(1-range, 1+range);
