@@ -15,8 +15,8 @@ inline const int IS_INTERVAL_REVERSE = 1; // 0-1
 
 inline const int IS_EXTEND = 1;
 
-inline int const START_TAG = 2;
-inline int const WRITE_START = 11;
+inline int const START_TAG = 3; //3-13
+inline int const WRITE_START = 10; //2-10
 // 藏分
 inline const bool TANKLAB = false;
 

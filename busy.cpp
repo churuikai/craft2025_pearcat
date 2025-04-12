@@ -204,7 +204,7 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
     else drop_rate = 0;
 
 
-    int m = 10;
+    int m = 12;
     if(avg_wait_time > 39) m -= 1;
     else if(avg_wait_time > 23) m-=2;
     else if(avg_wait_time > 18) m-=3;
@@ -222,7 +222,7 @@ void Controller::pre_filter_req(std::vector<std::pair<int, int>> &reqs)
     // int end_idx = int(req_per_time);
     for(int i = 0; i < reqs.size(); ++i)
     {
-        // if(req_neighbor_num[reqs[i].first] < 15 and tag_order[OBJECTS[reqs[i].second].tag] < m)
+        // if(req_neighbor_num[reqs[i].first] < 20 and tag_order[OBJECTS[reqs[i].second].tag] < m)
         // {
         //     over_load_reqs.push_back(reqs[i].first);
         // }

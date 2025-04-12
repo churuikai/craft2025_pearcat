@@ -50,7 +50,7 @@ std::vector<std::pair<int, Part *>> Controller::_get_disk(int obj_size, int tag)
 
     // 优先选择对应tag对应size分区有空闲空间的磁盘
     // std::vector<int> tag_list = {tag, -1, 1, 4, 6, 15, 2, 10, 13, 8, 14, 3, 12, 9, 16, 7, 11, 5};
-    // int WRITE_START = 11;
+    // int WRITE_START = 16;
     std::vector<int> tag_list = {tag, -1, WRITE_START};
     // tag_list.insert(tag_list.end(), TAG_ORDERS[0].begin(), TAG_ORDERS[0].end());
     std::vector<int> tag_list_tmp = get_similar_tag_sequence(timestamp, WRITE_START, 2);
