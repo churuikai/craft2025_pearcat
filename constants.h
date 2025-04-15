@@ -6,21 +6,13 @@ inline int T, M, N, V, G, k;
 inline float G_float;
 
 //参数
-inline const int BACK_NUM = 2; // 备份区数量 0-2
-inline const int IS_PART_BY_SIZE = 0; // 是否按大小分区 0-1
 inline const float DATA_COMPRESSION = 0.86; // 数据压缩系数 0-1
-
-//是否间隔反向
-inline const int IS_INTERVAL_REVERSE = 1; // 0-1
-
-inline const int IS_EXTEND = 1;
+inline const int IS_INTERVAL_REVERSE = 1; // //是否间隔反向
+inline const int IS_EXTEND = 1; // 是否向两端拓展
 
 inline int const START_TAG = 3; //3-13
 inline int const WRITE_START = 10; //2-10
-// 藏分
-inline const bool TANKLAB = false;
 
-// inline int write_count = 1;
 
 // 使用inline关键字允许在头文件中定义常量
 inline const int WINDOW_SIZE = 10;

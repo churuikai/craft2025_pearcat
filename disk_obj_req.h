@@ -6,6 +6,7 @@
 #include <cassert>
 #include "tools.h"
 #include <deque>
+#include <string>
 
 // 前向声明
 class Controller;
@@ -102,7 +103,9 @@ public:
 
     int id;
     int size;
-    Cell** cells; // 改为指针数组
+
+    std::vector<Cell> cells;                   // 磁盘点
+    std::vector<std::vector<Part>> part_tables; // 磁盘分区 [start, end, free_cells, 上次写入的位置]
 
     int K;
     
@@ -118,18 +121,6 @@ public:
     int data_size1;
     int data_size2;
 
-    // 当前负载系数
-    float load_coefficient = 1.0;
-    
-    // 磁盘分区 [start, end, free_cells, 上次写入的位置]
-    std::vector<std::vector<Part>> part_tables; 
-    
-    int back; // 备份区数量 0-2
-    int req_cells_num = 0;
-    int consume_token_tmp[MAX_DISK_SIZE];
-
-    // 请求位置 {req_id: [pos1, pos2, ...]}
-    IncIDMap<Int16Array> req_pos; 
 
     //标签间接反向, 该标签对应的标签
     int tag_reverse[MAX_TAG_NUM+1] = {0};
@@ -138,50 +129,46 @@ public:
     std::deque<int> recent_wait_times;
     // 最近请求的总等待时间
     long long total_wait_time = 0;
-    // 最近请求的平均等待时间
-    float avg_wait_time = 0.0f;
-    // 记录的请求数量上限
+    // 请求数量统计范围
     static const int MAX_RECENT_REQS = 66;
 
-    // 分片存储策略
-    // int tag_free_count[MAX_TAG_NUM+1] = {0};
-
-    Disk() : id(0), point1(1), point2(1), size(0), tokens1(0), tokens2(0), back(0), prev_read_token1(80), prev_read_token2(80), cells(nullptr) {}
+    Disk() : id(0), point1(1), point2(1), size(0), tokens1(0), tokens2(0), prev_read_token1(80), prev_read_token2(80) {}
     ~Disk();
 
+    // 初始化
     void init(int size, const std::vector<int> &tag_order, const std::vector<double> &tag_size_rate, const std::vector<std::vector<double>> &tag_size_db);
 
-    std::vector<Part>& get_parts(int tag, int size){return part_tables[tag*5+size];}
-
+    // 释放单元格
     void free_cell(int cell_id);
 
+    // 写入
     std::vector<int> write(int obj_id, const std::vector<int> &units, int tag, Part* part);
 
+    // 读取
     std::pair<std::string, std::vector<int>> read(int op_id);
 
-    // 过滤请求
-    void filter_req(std::vector<int>& drop_req_ids);
-
-    void _get_consume_token(int start_point, int last_token, int target_point);
-
+    // 垃圾回收
     std::vector<std::pair<int, int>> gc();
 
-    // 更新请求等待时间统计
-    void update_wait_time_stats(int req_id, int current_timestamp);
+    // 获取指定分区
+    std::vector<Part>& get_parts(int tag){return part_tables[tag];}
 
     // 获取平均等待时间
-    float get_avg_wait_time() const { return avg_wait_time; }
-
-    float calcu_win_influence(int req_id, int obj_id, bool is_pre);
-
+    float get_avg_wait_time() const { return static_cast<float>(total_wait_time) / recent_wait_times.size(); }
 
 private:
-    // 获取最佳起点
+    // 获取最佳读取起点
     int _get_best_start(int op_id);
-    // 按最佳起点读取
+    // 按最佳读取起点读取
     std::tuple<std::string, std::vector<int>, std::vector<int>> _read_by_best_path(int start, int op_id);
-    // 读取单元格
+    // 读取指定单元格
     void _read_cell(int cell_idx, std::vector<int>& completed_reqs);
+    // 更新请求等待时间统计
+    void _update_wait_time_stats(int req_id, int current_timestamp);
+
+    // 垃圾回收
+    // 更新各个分区内不属于该分区的对象
+    void _update_other_objs();
     // 一对多交换; 是否考虑加入空闲块
     void _disk_gc_s2m(std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
     void _part_gc_s2m(Part& part, std::vector<std::pair<int, int>>& gc_pairs, bool is_add_free);
@@ -190,8 +177,6 @@ private:
     void _part_gc_m2m(Part& part, std::vector<std::pair<int, int>>& gc_pairs);
     // 分区内部聚拢
     void _part_gc_inner(Part& part, std::vector<std::pair<int, int>>& gc_pairs, bool is_split_obj);
-    // 交换两个大小相同的对象
-    void _swap_obj(int obj_idx1, int obj_idx2, std::vector<std::pair<int, int>>& gc_pairs);
     // 交换两个单元格
     void _swap_cell(int cell_idx1, int cell_idx2);
     // 查找一组对象，使其大小之和等于目标大小
@@ -233,6 +218,16 @@ public:
     int obj_id;
     Int3Set remain_units;
     int timestamp;
-    void update(int req_id, Object& obj, int timestamp);
-    void remove(){obj_id = 0; remain_units.clear(); timestamp = 0;}
+    Req() : obj_id(0), timestamp(0) {}
+    void init(int req_id, Object& obj, int timestamp)
+    {
+        obj_id = obj.id;
+        remain_units.clear();
+        for (int i = 1; i <= obj.size; ++i)
+        {
+            remain_units.insert(i);
+        }
+        this->timestamp = timestamp;
+    };
+    void clear(){obj_id = 0; remain_units.clear(); timestamp = 0;}
 };

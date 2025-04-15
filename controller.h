@@ -1,7 +1,6 @@
 #pragma once
 #include "constants.h"
 #include "disk_obj_req.h"
-// #include "data_analysis.h"
 
 #include <vector>
 #include <unordered_set>
@@ -9,6 +8,7 @@
 #include <cassert>
 #include <map>
 #include <unordered_map>
+
 // 前向声明
 class Disk;
 class Object;
@@ -17,6 +17,7 @@ struct Part;
 struct Cell;
 struct PartStatsInfo;
 struct DiskStatsInfo;
+
 // 控制器
 class Controller
 {
@@ -26,9 +27,17 @@ public:
     std::vector<Object> OBJECTS;
     std::vector<Req> REQS;
 
+    // 时间戳
     int timestamp;
-    std::unordered_set<int> activate_reqs;
+
+    // 活跃的 req 范围
+    int req_105_idx = 0;
+    int req_new_idx = 0;
+
+    // 主动过滤的超载请求
     std::vector<int> over_load_reqs;
+    // 被动过滤的繁忙请求
+    std::vector<int> busy_reqs;
 
 
     int busy_count = 0;
@@ -39,7 +48,7 @@ public:
 
     Controller() : DISKS(MAX_DISK_NUM), OBJECTS(MAX_OBJECT_NUM), REQS(LEN_REQ) {}
     
-    // 初始化
+    // 初始化磁盘
     void disk_init();
 
     // 删除
@@ -48,7 +57,7 @@ public:
     // 写入
     Object *write(int obj_id, int obj_size, int tag);
 
-    // 处理请求
+    // 读取
     std::pair<std::vector<std::string>, std::vector<int>> read();
 
     // 添加请求
@@ -68,15 +77,8 @@ public:
 
 
 private:
-
     // 获取磁盘和对应分区
-    std::vector<std::pair<int, Part*>> _get_disk(int obj_size, int tag);
-
-    // 前置请求拦截, 返回是否拦截该请求
-    bool _pre_filter_req(int req_id, int obj_id);
-
-    // 后置请求过滤, 返回需要丢弃的请求id
-    std::vector<int> _post_filter_req();
+    std::vector<std::pair<int, Part*>> _get_write_disk(int obj_size, int tag);
 
 };
 
