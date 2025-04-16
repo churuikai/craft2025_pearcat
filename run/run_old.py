@@ -6,7 +6,6 @@ import time
 
 DEBUG_LEN = 2
 REPLAY_LEN = 10
-ROUND_LEN = 1
 
 
 def convert(arr, name, length):
@@ -20,17 +19,16 @@ def convert(arr, name, length):
     return [name] + arr
 
 
-def main(interactor, data, player, debug, replay, rd):
+def main(interactor, data, player, debug, replay):
     data_out = "result.txt"
 
     debug = convert(debug, "debug", DEBUG_LEN)
     replay = convert(replay, "replay", REPLAY_LEN)
-    rd = convert(rd, "round", ROUND_LEN)
 
     pipe1_read, pipe1_write = os.pipe()
     pipe2_read, pipe2_write = os.pipe()
 
-    process1 = subprocess.Popen([interactor, data, data_out] + debug + replay + rd,
+    process1 = subprocess.Popen([interactor, data, data_out] + debug + replay,
                                 stdin=pipe2_read,
                                 stdout=pipe1_write)
 
@@ -58,7 +56,6 @@ if __name__ == '__main__':
     # 使用*，没有-d是None，-d没有任何参数是[]
     parser.add_argument('--debug', '-d', type=int, nargs='*')
     parser.add_argument('--replay', '-r', type=int, nargs='*')
-    parser.add_argument('--round', type=int, nargs='*')
 
     args = parser.parse_args()
 
@@ -68,9 +65,6 @@ if __name__ == '__main__':
     if args.replay is not None and len(args.replay) > REPLAY_LEN:
         parser.error("argument --replay/-r: accepts at most 10 arguments")
 
-    if args.round is not None and len(args.round) > ROUND_LEN:
-        parser.error("argument --round: accepts at most 1 argument")
-
     os.makedirs("replay", exist_ok=True)
 
-    main(args.interactor[0], args.data[0], args.player[0], args.debug, args.replay, args.round)
+    main(args.interactor[0], args.data[0], args.player[0], args.debug, args.replay)

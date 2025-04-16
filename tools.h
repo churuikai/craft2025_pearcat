@@ -1,5 +1,6 @@
 #include <cstdint>
-
+#include <cstddef>
+#include <iterator>
 // 只能存储1-7的int的集合
 class Int3Set {
 private:

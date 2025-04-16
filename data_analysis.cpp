@@ -7,16 +7,13 @@
 #include <algorithm>
 #include <climits>
 #include <numeric>
-// 定义细粒度的频率数据结构
+// 定义频率数据结构
 std::vector<std::vector<std::vector<int>>> FRE;
-const int FINE_GRANULARITY = 1800;                    // 细粒度为100时间片，实验表明细粒度效果更差。。。
-std::vector<std::vector<std::vector<int>>> FRE_FINE; // [tag][fine_slice_idx][op_type]
+// 移除细粒度常量和数据结构
 std::vector<std::vector<int>> SORTED_READ_TAGS;      // [timestamp][tag_index]，预计算的排序标签
 
 // token数量
-std::vector<int> TOKEN_NUM; //
-
-
+std::vector<int> TOKEN_NUM;
 
 // 定义对象数量数据结构
 std::vector<std::vector<int>> OBJ_COUNT;             // [tag][slice_idx]粗粒度对象数量
@@ -28,32 +25,24 @@ int get_token(int timestamp)
     return TOKEN_NUM[slice_idx];
 }
 
-// 细粒度的频率获取函数 （op_type: 0删除，1写入，2读取）
-int get_freq_fine(int tag, int timestamp, int op_type)
+// 频率获取函数 （op_type: 0删除，1写入，2读取）
+int get_freq(int tag, int timestamp, int op_type)
 {
-
-    int fine_slice_idx = (timestamp - 1) / FINE_GRANULARITY + 1;
-    return FRE_FINE[tag][fine_slice_idx][op_type];
+    int slice_idx = (timestamp + FRE_PER_SLICING - 1) / FRE_PER_SLICING;
+    return FRE[tag][slice_idx][op_type];
 }
 
-// 获取排序后的当前TIME读频率的tag
+// 获取排序后的当前时间读频率的tag
 std::vector<int> &get_sorted_read_tag(int timestamp)
 {
-    int fine_slice_idx = (timestamp - 1) / FINE_GRANULARITY + 1;
-    assert(fine_slice_idx < SORTED_READ_TAGS.size()+1);
-    if(fine_slice_idx >= SORTED_READ_TAGS.size()) fine_slice_idx = SORTED_READ_TAGS.size()-1;
-    return SORTED_READ_TAGS[fine_slice_idx];
+    int slice_idx = std::min((timestamp + FRE_PER_SLICING - 1) / FRE_PER_SLICING, (int)SORTED_READ_TAGS.size() - 1);
+    return SORTED_READ_TAGS[slice_idx];
 }
 
 void process_data_analysis()
 {
-
     // 初始化频率数据
     FRE.resize(MAX_TAG_NUM + 1, std::vector<std::vector<int>>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, std::vector<int>(3, 0)));
-
-    // 初始化细粒度频率数据
-    int fine_slices = (T - 1) / FINE_GRANULARITY + 2;
-    FRE_FINE.resize(MAX_TAG_NUM + 1, std::vector<std::vector<int>>(fine_slices, std::vector<int>(3, 0)));
     
     // 初始化对象数量数据结构
     OBJ_COUNT.resize(MAX_TAG_NUM + 1, std::vector<int>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, 0));
@@ -81,55 +70,6 @@ void process_data_analysis()
     TOKEN_NUM.resize((T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING + 1);
     for (int i = 1; i <= (T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING; ++i)
         (void)scanf("%d", &TOKEN_NUM[i]);
-
-    // 插值得到细粒度频率数据
-    for (int tag_id = 1; tag_id <= M; ++tag_id)
-    {
-        for (int op_type = 0; op_type < 3; ++op_type)
-        {
-            int coarse_slices = (T - 1) / FRE_PER_SLICING + 1;
-
-            // 对每个细粒度时间点进行插值
-            for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx)
-            {
-                // 当前细粒度时间点对应的实际时间戳
-                int timestamp = (fine_idx - 1) * FINE_GRANULARITY + 1;
-                
-                // 如果细粒度的时间粒度正好是粗粒度的整数倍，可以直接取粗粒度的值
-                if (FINE_GRANULARITY % FRE_PER_SLICING == 0 && 
-                    (timestamp - 1) % FRE_PER_SLICING == 0) {
-                    int coarse_idx = (timestamp - 1) / FRE_PER_SLICING + 1;
-                    if (coarse_idx <= (T - 1) / FRE_PER_SLICING + 1) {
-                        FRE_FINE[tag_id][fine_idx][op_type] = FRE[tag_id][coarse_idx][op_type];
-                        continue;
-                    }
-                }
-                // 计算在粗粒度上的位置（浮点数）
-                double coarse_pos = (timestamp - 1) / (double)FRE_PER_SLICING + 1;
-                
-                // 找到对应的粗粒度区间的左右两个点
-                int left_idx = std::max(1, (int)floor(coarse_pos));
-                int right_idx = std::min((T - 1) / FRE_PER_SLICING + 1, left_idx + 1);
-                
-                // 检查边界情况
-                if (left_idx == right_idx) {
-                    // 在边界处，直接使用对应的粗粒度值
-                    FRE_FINE[tag_id][fine_idx][op_type] = FRE[tag_id][left_idx][op_type];
-                } else {
-                    // 计算在两点之间的位置比例
-                    double ratio = coarse_pos - left_idx;
-                    
-                    // 使用线性插值
-                    double left_val = FRE[tag_id][left_idx][op_type];
-                    double right_val = FRE[tag_id][right_idx][op_type];
-                    int interpolated_value = static_cast<int>(round(left_val * (1 - ratio) + right_val * ratio));
-                    
-                    // 确保值非负
-                    FRE_FINE[tag_id][fine_idx][op_type] = std::max(0, interpolated_value);
-                }
-            }
-        }
-    }
     
     // 计算粗粒度对象数量
     for (int tag_id = 1; tag_id <= M; ++tag_id) {
@@ -142,8 +82,9 @@ void process_data_analysis()
     }
     
     // 预计算每个时间点的排序标签
-    SORTED_READ_TAGS.resize(fine_slices);
-    for (int fine_idx = 1; fine_idx < fine_slices; ++fine_idx)
+    int slices = (T - 1) / FRE_PER_SLICING + 2;
+    SORTED_READ_TAGS.resize(slices);
+    for (int slice_idx = 1; slice_idx < slices; ++slice_idx)
     {
         std::vector<int> tag_order;
         for (int tag_id = 1; tag_id <= M; ++tag_id)
@@ -152,16 +93,15 @@ void process_data_analysis()
         }
 
         // 按照读取频率（op_type=2）排序
-        std::sort(tag_order.begin(), tag_order.end(), [fine_idx](int a, int b)
-                  { return FRE_FINE[a][fine_idx][2] < FRE_FINE[b][fine_idx][2]; });
+        std::sort(tag_order.begin(), tag_order.end(), [slice_idx](int a, int b)
+                  { return FRE[a][slice_idx][2] < FRE[b][slice_idx][2]; });
 
-        SORTED_READ_TAGS[fine_idx] = tag_order;
+        SORTED_READ_TAGS[slice_idx] = tag_order;
     }
 
     // 选择使用哪种方法计算标签顺序
     compute_tag_order(); // 原有方法：根据读取频率曲线相似度排列
     // compute_alternating_tag_order(); // 新方法：交替使用读取频率相似度和对象数量差异
-
 }
 
 //计算标签顺序
@@ -180,9 +120,7 @@ void compute_tag_order()
             max_read_tag = tag_id;
         }
     }
-    // debug(max_read_tag);
-    // std::vector<int> tag_order = {max_read_tag};
-    // START_TAG = 1;
+    
     std::vector<int> tag_order = {START_TAG};
     
     // 按读频率曲线最相似排列
@@ -227,7 +165,6 @@ void compute_tag_order()
 
     info("根据读取频率曲线最相似排列的标签顺序：==========================");
     info(tag_order);
-
 }
 
 // 归一化曲线函数
@@ -250,7 +187,7 @@ double __compute_similarity(const std::vector<double> &curve1, const std::vector
     std::vector<double> normalized_curve1 = normalize_curve1 ? __normalize_curve(curve1) : curve1;
     std::vector<double> normalized_curve2 = normalize_curve2 ? __normalize_curve(curve2) : curve2;
     
-    // 使用更好的相似度计算方法 - 余弦相似度
+    // 余弦相似度
     double dot_product = 0.0;
     double norm1 = 0.0;
     double norm2 = 0.0;
@@ -272,7 +209,6 @@ double __compute_similarity(const std::vector<double> &curve1, const std::vector
     // 转换为距离度量，值域为[0,2]，值越小表示越相似
     return 1.0 - cosine_similarity;
 }
-
 
 // 获取与指定标签读取频率相似的标签序列
 // time: 当前时间点
@@ -329,7 +265,3 @@ std::vector<int> get_similar_tag_sequence(int time, int tag, int mode)
     
     return result;
 }
-
-
-
-
