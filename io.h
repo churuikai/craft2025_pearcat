@@ -2,27 +2,54 @@
 #include "controller.h"
 #include "data_analysis.h"
 
+inline std::vector<int> INPUT;
+inline int INPUT_POINTER = 0;
+inline int REAL_TIME_TIMESTAMP = 1;
+
+inline void process_incremental_info(Controller &controller, int timestamp)
+{
+    int n_incremental;
+    scanf("%d", &n_incremental);
+    for (int i = 0; i < n_incremental; ++i)
+    {
+        int obj_id, tag;
+        scanf("%d%d", &obj_id, &tag);
+    }
+}
+
+
 inline void process_timestamp(Controller &controller, int timestamp)
 {
     scanf("%*s%*d");
+    REAL_TIME_TIMESTAMP = timestamp;
+
     // 更新各个磁盘的tokens
     for (int i = 1; i <= N; ++i)
     {
-        controller.DISKS[i].tokens1 = G + get_token(timestamp);
-        controller.DISKS[i].tokens2 = G + get_token(timestamp);
+        // controller.DISKS[i].tokens1 = G + get_token(timestamp);
+        // controller.DISKS[i].tokens1 = G + get_token(timestamp);
+        controller.DISKS[i].tokens1 = G;
+        controller.DISKS[i].tokens2 = G;
         controller.DISKS[i].K = k;
     }
     // 同步时间
-    controller.timestamp = timestamp;
-    printf("TIMESTAMP %d\n", timestamp);
+    controller.timestamp = (timestamp-1) % (T + EXTRA_TIME) + 1;
+    printf("TIMESTAMP %d\n", (timestamp-1) % (T + EXTRA_TIME) + 1);
     fflush(stdout);
 };
 
 inline void process_delete(Controller &controller)
 {
     int n_delete;
-
-    scanf("%d", &n_delete);
+    if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+    {
+        scanf("%d", &n_delete);
+        INPUT.push_back(n_delete);
+    } 
+    else
+    {
+        n_delete = INPUT[INPUT_POINTER++];
+    }
 
     if (n_delete == 0)
     {
@@ -35,7 +62,15 @@ inline void process_delete(Controller &controller)
     std::vector<int> delete_ids(n_delete);
     for (int i = 0; i < n_delete; ++i)
     {
-        scanf("%d", &delete_ids[i]);
+        if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+        {
+            scanf("%d", &delete_ids[i]);
+            INPUT.push_back(delete_ids[i]);
+        }
+        else
+        {
+            delete_ids[i] = INPUT[INPUT_POINTER++];
+        }
     }
 
     // 统计需要取消的请求
@@ -57,14 +92,34 @@ inline void process_delete(Controller &controller)
 inline void process_write(Controller &controller)
 {
     int n_write;
-    scanf("%d", &n_write);
+    if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+    {
+        scanf("%d", &n_write);
+        INPUT.push_back(n_write);
+    } 
+    else
+    {
+        n_write = INPUT[INPUT_POINTER++];
+    }
     if (n_write == 0)
         return;
     // 处理每个写入请求
     for (int i = 0; i < n_write; ++i)
     {
         int obj_id, obj_size, tag;
-        scanf("%d%d%d", &obj_id, &obj_size, &tag);
+        if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+        {
+            scanf("%d%d%d", &obj_id, &obj_size, &tag);
+            INPUT.push_back(obj_id);
+            INPUT.push_back(obj_size);
+            INPUT.push_back(tag);
+        } 
+        else
+        {
+            obj_id = INPUT[INPUT_POINTER++];
+            obj_size = INPUT[INPUT_POINTER++];
+            tag = INPUT[INPUT_POINTER++];
+        }
         Object *obj = controller.write(obj_id, obj_size, tag);
         printf("%d\n", obj_id);
         for (const auto &[disk_id, cell_idxs] : obj->replicas)
@@ -81,19 +136,36 @@ inline void process_write(Controller &controller)
 inline void process_read(Controller &controller)
 {
     int n_read;
-    scanf("%d", &n_read);
-
+    if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+    {
+        scanf("%d", &n_read);
+        INPUT.push_back(n_read);
+    } 
+    else
+    {
+        n_read = INPUT[INPUT_POINTER++];
+    }
     // 添加请求
     std::vector<std::pair<int, int>> reqs;
     for (int i = 0; i < n_read; ++i)
     {
         int req_id, obj_id;
-        scanf("%d %d", &req_id, &obj_id);
+        if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+        {
+            scanf("%d %d", &req_id, &obj_id);
+            INPUT.push_back(req_id);
+            INPUT.push_back(obj_id);
+        } 
+        else
+        {
+            req_id = INPUT[INPUT_POINTER++];
+            obj_id = INPUT[INPUT_POINTER++];
+        }
         reqs.push_back({req_id, obj_id});
     }
 
     // 前置过滤
-    controller.pre_filter_req(reqs);
+    // controller.pre_filter_req(reqs);
 
     // 添加请求
     for(auto [req_id, obj_id] : reqs)
@@ -153,8 +225,8 @@ inline void process_busy(Controller &controller)
 
 inline void process_gc(Controller &controller)
 {
-
-    (void)scanf("%*s%*s");
+    if(REAL_TIME_TIMESTAMP <= T + EXTRA_TIME) 
+        (void)scanf("%*s%*s");
     printf("GARBAGE COLLECTION\n");
 
     for (int i = 1; i <= N; i++)

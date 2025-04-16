@@ -13,17 +13,17 @@ std::vector<std::vector<std::vector<int>>> FRE;
 std::vector<std::vector<int>> SORTED_READ_TAGS;      // [timestamp][tag_index]，预计算的排序标签
 
 // token数量
-std::vector<int> TOKEN_NUM;
+// std::vector<int> TOKEN_NUM;
 
 // 定义对象数量数据结构
 std::vector<std::vector<int>> OBJ_COUNT;             // [tag][slice_idx]粗粒度对象数量
 
-int get_token(int timestamp)
-{
-    int slice_idx = (timestamp + FRE_PER_SLICING - 1) / FRE_PER_SLICING;
-    assert(slice_idx < TOKEN_NUM.size() and slice_idx > 0);
-    return TOKEN_NUM[slice_idx];
-}
+// int get_token(int timestamp)
+// {
+//     int slice_idx = (timestamp + FRE_PER_SLICING - 1) / FRE_PER_SLICING;
+//     assert(slice_idx < TOKEN_NUM.size() and slice_idx > 0);
+//     return TOKEN_NUM[slice_idx];
+// }
 
 // 频率获取函数 （op_type: 0删除，1写入，2读取）
 int get_freq(int tag, int timestamp, int op_type)
@@ -47,29 +47,33 @@ void process_data_analysis()
     // 初始化对象数量数据结构
     OBJ_COUNT.resize(MAX_TAG_NUM + 1, std::vector<int>((MAX_SLICING_NUM + 1) / FRE_PER_SLICING + 1, 0));
 
+
     // 读取删除频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
-            (void)scanf("%d", &FRE[tag_id][i][0]);
+            // (void)scanf("%d", &FRE[tag_id][i][0]);
+            FRE[tag_id][i][0] = DEL_COUNT[tag_id-1][i-1];
     }
     // 读取写入频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
-            (void)scanf("%d", &FRE[tag_id][i][1]);
+            // (void)scanf("%d", &FRE[tag_id][i][1]);
+            FRE[tag_id][i][1] = WRITE_COUNT[tag_id-1][i-1];
     }
     // 读取读取频率数据
     for (int tag_id = 1; tag_id <= M; ++tag_id)
     {
         for (int i = 1; i <= (T - 1) / FRE_PER_SLICING + 1; ++i)
-            (void)scanf("%d", &FRE[tag_id][i][2]);
+            // (void)scanf("%d", &FRE[tag_id][i][2]);
+            FRE[tag_id][i][2] = READ_COUNT[tag_id-1][i-1];
     }
 
     // 读取token数量
-    TOKEN_NUM.resize((T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING + 1);
-    for (int i = 1; i <= (T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING; ++i)
-        (void)scanf("%d", &TOKEN_NUM[i]);
+    // TOKEN_NUM.resize((T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING + 1);
+    // for (int i = 1; i <= (T + 105 + FRE_PER_SLICING - 1) / FRE_PER_SLICING; ++i)
+    //     (void)scanf("%d", &TOKEN_NUM[i]);
     
     // 计算粗粒度对象数量
     for (int tag_id = 1; tag_id <= M; ++tag_id) {

@@ -28,4 +28,4 @@ echo "构建成功！"
 
 # 运行Python脚本
 # python run/run.py run/interactor run/sample_practice_1.in ./code_craft
-python run/run_old.py run/interactor-live run/sample_official.in ./code_craft
+python run/run.py run/interactor run/sample_practice_1.in ./code_craft

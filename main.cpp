@@ -32,7 +32,8 @@ int main() {
     fflush(stdout);
 
     // 处理每个时间片
-    for (int timestamp = 1; timestamp <= T + EXTRA_TIME; ++timestamp) {
+    for (int timestamp = 1; timestamp <= (T + EXTRA_TIME)*2; ++timestamp) {
+
         // 处理时间戳事件
         process_timestamp(controller, timestamp);
         
@@ -49,18 +50,22 @@ int main() {
         process_busy(controller);
 
         // 处理垃圾回收事件, 每1800时间片执行一次
-        if (timestamp % 1800 == 0) {
+        if (controller.timestamp % 1800 == 0) {
             // debug("timestamp: ", timestamp);
             process_gc(controller);
 
         }
 
+        // 处理增量信息
+        if(timestamp == T + EXTRA_TIME) {
+            process_incremental_info(controller, timestamp);
+            controller = Controller();
+            controller.disk_init();
+        }
+
         // 验证数据结构
         if (timestamp % 10000 == 0) {
             process_verify(controller);
-        }
-        if (timestamp % 360 == 0) {
-            info("avg_wait_time: ", controller.DISKS[1].get_avg_wait_time());
         }
     }
 

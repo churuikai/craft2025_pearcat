@@ -9,7 +9,37 @@
 #include "debug.h"
 #include <random>
 
+// 写入
+Object *Controller::write(int obj_id, int obj_size, int tag)
+{
+    // 随机给 tag 赋值
+    tag = tag==0 ? rand() % M + 1 : tag;
+    // 获取对象
+    Object &obj = OBJECTS[obj_id];
+    obj.size = obj_size;
+    obj.tag = tag;
+    obj.id = obj_id;
 
+    // 获取磁盘
+    auto space = _get_write_disk(obj_size, tag);
+
+    // 写入磁盘
+    std::vector<int> units;
+    for (int i = 1; i <= obj_size; ++i)
+    {
+        units.push_back(i);
+    }
+
+    for (size_t i = 0; i < space.size(); ++i)
+    {
+        auto &[disk_id, part] = space[i];
+        auto pos = DISKS[disk_id].write(obj_id, units, tag, part);
+        obj.replicas[i].first = disk_id;
+        obj.replicas[i].second.insert(obj.replicas[i].second.end(), pos.begin(), pos.end());
+    }
+
+    return &obj;
+}
 
 // 获取磁盘和对应分区
 std::vector<std::pair<int, Part *>> Controller::_get_write_disk(int obj_size, int tag)
@@ -122,35 +152,7 @@ std::vector<std::pair<int, Part *>> Controller::_get_write_disk(int obj_size, in
     return space;
 }
 
-// 写入
-Object *Controller::write(int obj_id, int obj_size, int tag)
-{
-    // 获取对象
-    Object &obj = OBJECTS[obj_id];
-    obj.size = obj_size;
-    obj.tag = tag;
-    obj.id = obj_id;
 
-    // 获取磁盘
-    auto space = _get_write_disk(obj_size, tag);
-
-    // 写入磁盘
-    std::vector<int> units;
-    for (int i = 1; i <= obj_size; ++i)
-    {
-        units.push_back(i);
-    }
-
-    for (size_t i = 0; i < space.size(); ++i)
-    {
-        auto &[disk_id, part] = space[i];
-        auto pos = DISKS[disk_id].write(obj_id, units, tag, part);
-        obj.replicas[i].first = disk_id;
-        obj.replicas[i].second.insert(obj.replicas[i].second.end(), pos.begin(), pos.end());
-    }
-
-    return &obj;
-}
 
 std::vector<int> Disk::write(int obj_id, const std::vector<int> &units, int tag, Part *part)
 {
